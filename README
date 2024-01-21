@@ -1,0 +1,4 @@
+Python script to calculate the Total Sharehoder Return for CVE.TO and compare to 
+a list of it's peers over a defined period
+
+Developed with python 3.11.7
