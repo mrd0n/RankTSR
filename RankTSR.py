@@ -10,10 +10,9 @@ For each ticker in the list of tickers:
 import pandas as pd
 import pytz
 import yfinance as yf
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tabulate import tabulate
-import pyarrow
 import matplotlib.pyplot as plt
 
 # Ignore warnings in deprecated packages
@@ -49,7 +48,7 @@ dividend_data_df = pd.DataFrame()
 # Download the stock data between the start and end dates
 # including 60 calendar days before the start date so that the 30 day VWAP can be calculated
 for ticker in tickers:
-    data = yf.download(ticker,interval='1d',start=start_date-timedelta(days=60), 
+    data = yf.download(ticker, interval='1d', start=start_date-timedelta(days=60),
                        end=end_date, progress=False)
 
     # normalize the datetime object with timezone 'America/New_York'
@@ -63,9 +62,9 @@ for ticker in tickers:
 
     # Calculate the TypicalPriceVolume
     data['TPV'] = data['TP'] * data['Volume']
-    
+
     # Calculate the rolling 30 day VWAP
-    data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()     
+    data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()
 
     # Get the dividends
     dividends = yf.Ticker(ticker).dividends.loc[start_date.strftime("%Y-%m-%d"):end_date.strftime("%Y-%m-%d")].to_frame()
@@ -79,8 +78,8 @@ for ticker in tickers:
     dividend_data_df = pd.concat([dividend_data_df, dividends], ignore_index=False)
 
 # Save dataframes to csv
-#price_data_df.to_csv('price_data.csv')
-#dividend_data_df.to_csv('dividend_data.csv')
+# price_data_df.to_csv('price_data.csv')
+# dividend_data_df.to_csv('dividend_data.csv')
 
 # Initialize an Total Shareholder Return list
 tsr_list = []
@@ -88,23 +87,23 @@ tsr_list = []
 # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
 for ticker in tickers:
     # find the starting VWAP
-    starting_vwap = price_data_df[(price_data_df.index >= start_date) & 
-                                  (price_data_df.index <= end_date + 
+    starting_vwap = price_data_df[(price_data_df.index >= start_date) &
+                                  (price_data_df.index <= end_date +
                                    relativedelta(days=7)) &
                                   (price_data_df['Ticker'] == ticker)].head(1)
 
     # find the ending VWAP
-    ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) & 
+    ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
                                 (price_data_df.index <= end_date) &
                                 (price_data_df['Ticker'] == ticker)].tail(1)
 
-    # Calculate the total amount of dividends issued over the period for CVE    
+    # Calculate the total amount of dividends issued over the period for CVE
     dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
-                                    (dividend_data_df.index >= start_date) & 
-                                    (dividend_data_df.index <= end_date)].sum()
+                                       (dividend_data_df.index >= start_date) &
+                                       (dividend_data_df.index <= end_date)].sum()
 
     # Calculate the total shareholder return (TSR)
-    tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] + 
+    tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] +
            dividends_total['Dividends']) / starting_vwap['VWAP'].values[0]
 
     # Append the ticker and tsr result to the list
@@ -131,15 +130,10 @@ for ticker, tsr in tsr_list.items():
     plt.bar(ticker, tsr)
 plt.xlabel('Ticker')
 plt.ylabel('Total Shareholder Return (TSR)')
-plt.title('TSR for each Ticker from ' + start_date.strftime("%Y-%m-%d") + ' to ' + 
+plt.title('TSR for each Ticker from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
           end_date.strftime("%Y-%m-%d"))
 plt.scatter('CVE.TO', tsr_list['CVE.TO'], marker='o', color='red')
-plt.text('CVE.TO', tsr_list['CVE.TO'], 'CVE.TO has a higher TSR than ' + str(count / (len(tsr_list)-1) * 100) + 
+plt.text('CVE.TO', tsr_list['CVE.TO'], 'CVE.TO has a higher TSR than ' +
+         str(count / (len(tsr_list)-1) * 100) +
          '% of it\'s peers.', fontsize=10, color='black')
 plt.show()
-
-
-
-
-
-
