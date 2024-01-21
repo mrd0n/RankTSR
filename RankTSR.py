@@ -41,6 +41,21 @@ end_date = datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_Yo
 # this should handle leap years
 start_date = end_date - relativedelta(years=3) + relativedelta(days=1)
 
+tsr_periods = [
+               {'2021',
+                datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                datetime(2021, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))},
+               {'2022',
+                datetime(2022, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                datetime(2022, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))},
+               {'2023', 
+                datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))},
+               {'2021-2023',
+                datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))}
+              ]
+
 # Initialize an empty dataframe to store the stock data
 price_data_df = pd.DataFrame()
 dividend_data_df = pd.DataFrame()
@@ -81,34 +96,42 @@ for ticker in tickers:
 # price_data_df.to_csv('price_data.csv')
 # dividend_data_df.to_csv('dividend_data.csv')
 
-# Initialize an Total Shareholder Return list
-tsr_list = []
+# Define a function to calculate the Total Shareholder Return (TSR) for a list
+# of provided ticker that returns a list of tickers and their TSR
+def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
+    # Initialize an empty list to store the ticker and TSR
+    tsr_list = []
 
-# Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
-for ticker in tickers:
-    # find the starting VWAP
-    starting_vwap = price_data_df[(price_data_df.index >= start_date) &
-                                  (price_data_df.index <= end_date +
-                                   relativedelta(days=7)) &
-                                  (price_data_df['Ticker'] == ticker)].head(1)
+    # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
+    for ticker in tickers:
+        # find the starting VWAP
+        starting_vwap = price_data_df[(price_data_df.index >= start_date) &
+                                      (price_data_df.index <= end_date +
+                                       relativedelta(days=7)) &
+                                      (price_data_df['Ticker'] == ticker)].head(1)
 
-    # find the ending VWAP
-    ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
-                                (price_data_df.index <= end_date) &
-                                (price_data_df['Ticker'] == ticker)].tail(1)
+        # find the ending VWAP
+        ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
+                                    (price_data_df.index <= end_date) &
+                                    (price_data_df['Ticker'] == ticker)].tail(1)
 
-    # Calculate the total amount of dividends issued over the period for CVE
-    dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
-                                       (dividend_data_df.index >= start_date) &
-                                       (dividend_data_df.index <= end_date)].sum()
+        # Calculate the total amount of dividends issued over the period for CVE
+        dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
+                                           (dividend_data_df.index >= start_date) &
+                                           (dividend_data_df.index <= end_date)].sum()
 
-    # Calculate the total shareholder return (TSR)
-    tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] +
-           dividends_total['Dividends']) / starting_vwap['VWAP'].values[0]
+        # Calculate the total shareholder return (TSR)
+        tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] +
+               dividends_total['Dividends']) / starting_vwap['VWAP'].values[0]
 
-    # Append the ticker and tsr result to the list
-    tsr_list.append([ticker, tsr])
+        # Append the ticker and TSR to the list
+        tsr_list.append([ticker, tsr])
 
+    return tsr_list
+
+
+# calculate the Total Shareholder Return (TSR) for each ticker
+tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date)
 
 # sort the list by decending tsr
 tsr_list.sort(key=lambda x: x[1], reverse=True)
