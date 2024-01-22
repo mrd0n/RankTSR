@@ -29,6 +29,6 @@ For period  2021-2023 ( 2021-01-01 : 2023-12-31 )
 ╘════╧══════════╧══════════════╧════════════╧═════════════╧══════════╧═══════════╛
 The percentile rank for CVE.TO is 81.82% 
 
-![example chart](https://github.com/mrd0n/RankTSR/blob/main/tsr_chart_2021-2023.png)
+![example chart](https://github.com/mrd0n/RankTSR/blob/main/tsr_chart_2021-2023.png "2021-2023 example")
 
 Developed with python 3.11.7
