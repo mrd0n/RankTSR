@@ -154,17 +154,17 @@ if __name__ == "__main__":
         print("CVE.TO has a higher TSR than", count / (len(tsr_list)-1) * 100,
               "% of it\'s peers for period", tsr_period[0], ".\n\n")
 
-    '''
         # Loop through each ticker and plot the tsr values
         for ticker, tsr in tsr_list.items():
             plt.bar(ticker, tsr)
         plt.xlabel('Ticker')
         plt.ylabel('Total Shareholder Return (TSR)')
         plt.title('TSR for each Ticker from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
-                end_date.strftime("%Y-%m-%d"))
+                  end_date.strftime("%Y-%m-%d"))
         plt.scatter('CVE.TO', tsr_list['CVE.TO'], marker='o', color='red')
         plt.text('CVE.TO', tsr_list['CVE.TO'], 'CVE.TO has a higher TSR than ' +
-                str(count / (len(tsr_list)-1) * 100) +
-                '% of it\'s peers.', fontsize=10, color='black')
-        plt.show()
-    '''
+                 str(count / (len(tsr_list)-1) * 100) +
+                 '% of it\'s peers.', fontsize=10, color='black')
+        # save the chart to a file
+        plt.savefig('tsr_chart_' + tsr_period[0] + '.png')
+        # plt.show()
