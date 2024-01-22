@@ -42,19 +42,54 @@ end_date = datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_Yo
 start_date = end_date - relativedelta(years=3) + relativedelta(days=1)
 
 tsr_periods = [
-               {'2021',
+               ['2021',
                 datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                datetime(2021, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))},
-               {'2022',
+                datetime(2021, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
+               ['2022',
                 datetime(2022, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                datetime(2022, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))},
-               {'2023', 
+                datetime(2022, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
+               ['2023', 
                 datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))},
-               {'2021-2023',
+                datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
+               ['2021-2023',
                 datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))}
+                datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))]
               ]
+
+
+# Function to calculate the Total Shareholder Return (TSR) for a list
+# of provided ticker that returns a list of tickers and their TSR
+def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
+    # Initialize an empty list to store the ticker and TSR
+    tsr_list = []
+
+    # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
+    for ticker in tickers:
+        # find the starting VWAP
+        starting_vwap = price_data_df[(price_data_df.index >= start_date) &
+                                      (price_data_df.index <= end_date +
+                                       relativedelta(days=7)) &
+                                      (price_data_df['Ticker'] == ticker)].head(1)
+
+        # find the ending VWAP
+        ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
+                                    (price_data_df.index <= end_date) &
+                                    (price_data_df['Ticker'] == ticker)].tail(1)
+
+        # Calculate the total amount of dividends issued over the period for CVE
+        dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
+                                           (dividend_data_df.index >= start_date) &
+                                           (dividend_data_df.index <= end_date)].sum()
+
+        # Calculate the total shareholder return (TSR)
+        tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] +
+               dividends_total['Dividends']) / starting_vwap['VWAP'].values[0]
+
+        # Append the ticker and TSR to the list
+        tsr_list.append([ticker, tsr])
+
+    return tsr_list
+
 
 # Initialize an empty dataframe to store the stock data
 price_data_df = pd.DataFrame()
@@ -92,71 +127,42 @@ for ticker in tickers:
     # Append the dividends to the dataframe
     dividend_data_df = pd.concat([dividend_data_df, dividends], ignore_index=False)
 
-# Save dataframes to csv
-# price_data_df.to_csv('price_data.csv')
-# dividend_data_df.to_csv('dividend_data.csv')
-
-# Define a function to calculate the Total Shareholder Return (TSR) for a list
-# of provided ticker that returns a list of tickers and their TSR
-def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
-    # Initialize an empty list to store the ticker and TSR
-    tsr_list = []
-
-    # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
-    for ticker in tickers:
-        # find the starting VWAP
-        starting_vwap = price_data_df[(price_data_df.index >= start_date) &
-                                      (price_data_df.index <= end_date +
-                                       relativedelta(days=7)) &
-                                      (price_data_df['Ticker'] == ticker)].head(1)
-
-        # find the ending VWAP
-        ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
-                                    (price_data_df.index <= end_date) &
-                                    (price_data_df['Ticker'] == ticker)].tail(1)
-
-        # Calculate the total amount of dividends issued over the period for CVE
-        dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
-                                           (dividend_data_df.index >= start_date) &
-                                           (dividend_data_df.index <= end_date)].sum()
-
-        # Calculate the total shareholder return (TSR)
-        tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] +
-               dividends_total['Dividends']) / starting_vwap['VWAP'].values[0]
-
-        # Append the ticker and TSR to the list
-        tsr_list.append([ticker, tsr])
-
-    return tsr_list
-
-
 # calculate the Total Shareholder Return (TSR) for each ticker
 tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date)
 
-# sort the list by decending tsr
-tsr_list.sort(key=lambda x: x[1], reverse=True)
+# loop through the tsr_periods
+for tsr_period in tsr_periods:
+    # calculate the tsr for the period
+    print("For period ", tsr_period[0], "==", tsr_period[1].strftime("%Y-%m-%d"), ":", 
+          tsr_period[2].strftime("%Y-%m-%d"))
+    tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, tsr_period[1], tsr_period[2])
 
-# print the rank of each ticker by TSR using tabulate in a pretty table with borders
-print(tabulate(tsr_list, headers=['Ticker', 'TSR'], tablefmt='fancy_grid'))
+    # sort the list by decending tsr
+    tsr_list.sort(key=lambda x: x[1], reverse=True)
 
-# index the tsr list by ticker
-tsr_list = {x[0]: x[1] for x in tsr_list}
+    # print the rank of each ticker by TSR using tabulate in a pretty table with borders
+    print(tabulate(tsr_list, headers=['Ticker', 'TSR'], tablefmt='fancy_grid'))
 
-# calculate the number of tickers in the list where ticker 'CVE.TO' has a higher TSR than the others
-count = sum(1 for ticker, tsr in tsr_list.items() if tsr < tsr_list['CVE.TO'])
+    # index the tsr list by ticker
+    tsr_list = {x[0]: x[1] for x in tsr_list}
 
-print("CVE.TO has a higher TSR than ", count / (len(tsr_list)-1) * 100,
-      "% of it\'s peers.")
+    # calculate the number of tickers in the list where ticker 'CVE.TO' has a higher TSR than the others
+    count = sum(1 for ticker, tsr in tsr_list.items() if tsr < tsr_list['CVE.TO'])
 
-# Loop through each ticker and plot the tsr values
-for ticker, tsr in tsr_list.items():
-    plt.bar(ticker, tsr)
-plt.xlabel('Ticker')
-plt.ylabel('Total Shareholder Return (TSR)')
-plt.title('TSR for each Ticker from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
-          end_date.strftime("%Y-%m-%d"))
-plt.scatter('CVE.TO', tsr_list['CVE.TO'], marker='o', color='red')
-plt.text('CVE.TO', tsr_list['CVE.TO'], 'CVE.TO has a higher TSR than ' +
-         str(count / (len(tsr_list)-1) * 100) +
-         '% of it\'s peers.', fontsize=10, color='black')
-plt.show()
+    print("CVE.TO has a higher TSR than", count / (len(tsr_list)-1) * 100,
+          "% of it\'s peers for period ", tsr_period[0], ".\n\n")
+
+'''
+    # Loop through each ticker and plot the tsr values
+    for ticker, tsr in tsr_list.items():
+        plt.bar(ticker, tsr)
+    plt.xlabel('Ticker')
+    plt.ylabel('Total Shareholder Return (TSR)')
+    plt.title('TSR for each Ticker from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
+            end_date.strftime("%Y-%m-%d"))
+    plt.scatter('CVE.TO', tsr_list['CVE.TO'], marker='o', color='red')
+    plt.text('CVE.TO', tsr_list['CVE.TO'], 'CVE.TO has a higher TSR than ' +
+            str(count / (len(tsr_list)-1) * 100) +
+            '% of it\'s peers.', fontsize=10, color='black')
+    plt.show()
+'''
