@@ -164,7 +164,7 @@ if __name__ == "__main__":
         for ticker, tsr in tsr_sorted[['Ticker', 'TSR']].values:
             plt.bar(ticker, tsr)
         plt.xlabel('Ticker')
-        plt.xticks(fontsize=5, rotation=45)
+        plt.xticks(fontsize=6, rotation=45)
         plt.ylabel('Total Shareholder Return (TSR)')
         plt.title('TSR for each company from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
                   end_date.strftime("%Y-%m-%d"))
