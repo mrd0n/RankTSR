@@ -30,8 +30,7 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     for ticker in tickers:
         # find the starting VWAP
         starting_vwap = price_data_df[(price_data_df.index >= start_date) &
-                                      (price_data_df.index <= end_date +
-                                       relativedelta(days=7)) &
+                                      (price_data_df.index <= end_date + relativedelta(days=7)) &
                                       (price_data_df['Ticker'] == ticker)].head(1)
 
         # find the ending VWAP
@@ -42,14 +41,15 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
         # Calculate the total amount of dividends issued over the period for CVE
         dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
                                            (dividend_data_df.index >= start_date) &
-                                           (dividend_data_df.index <= end_date)].sum()
+                                           (dividend_data_df.index <= end_date)]['Dividends'].sum()
 
         # Calculate the total shareholder return (TSR)
         tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] +
-               dividends_total['Dividends']) / starting_vwap['VWAP'].values[0]
+               dividends_total) / starting_vwap['VWAP'].values[0]
 
         # Append the ticker and TSR to the list
-        tsr_list.append([ticker, tsr])
+        tsr_list.append([ticker, starting_vwap['VWAP'].values[0],
+                         ending_vwap['VWAP'].values[0], dividends_total, tsr])
 
     return tsr_list
 
@@ -132,6 +132,10 @@ if __name__ == "__main__":
         # Append the dividends to the dataframe
         dividend_data_df = pd.concat([dividend_data_df, dividends], ignore_index=False)
 
+        # save the dataframe to a csv file
+        # price_data_df.to_csv('price_data.csv')
+        # dividend_data_df.to_csv('dividend_data.csv')
+
     # loop through the tsr_periods and calculate the TSR
     for tsr_period in tsr_periods:
         # calculate the tsr for the period
@@ -140,10 +144,11 @@ if __name__ == "__main__":
         tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, tsr_period[1], tsr_period[2])
 
         # sort the list by decending tsr to print a table of tickers and their TSR
-        tsr_list.sort(key=lambda x: x[1], reverse=True)
+        tsr_list.sort(key=lambda x: x[4], reverse=True)
 
         # print the rank of each ticker by TSR
-        print(tabulate(tsr_list, headers=['Ticker', 'TSR'], tablefmt='fancy_grid'))
+        print(tabulate(tsr_list, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR'],
+                       tablefmt='fancy_grid'))
 
         # Convert the list into a dictionary
         tsr_list = {x[0]: x[1] for x in tsr_list}
