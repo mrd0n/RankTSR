@@ -1,6 +1,7 @@
 Python script to calculate the Total Sharehoder Return for CVE.TO and compare to 
 a list of it's peers over a defined period
 
+`
 For period  2021-2023 ( 2021-01-01 : 2023-12-31 )
 ╒════╤══════════╤══════════════╤════════════╤═════════════╤══════════╤═══════════╕
 │    │ Ticker   │   Start VWAP │   End VWAP │   Dividends │      TSR │      Rank │
@@ -28,7 +29,7 @@ For period  2021-2023 ( 2021-01-01 : 2023-12-31 )
 │  8 │ CVX      │      88.8961 │   145.95   │     17.03   │ 0.833371 │ 0.0909091 │
 ╘════╧══════════╧══════════════╧════════════╧═════════════╧══════════╧═══════════╛
 The percentile rank for CVE.TO is 81.82% 
-
+`
 ![example chart](https://github.com/mrd0n/RankTSR/blob/main/tsr_chart_2021-2023.png "2021-2023 example")
 
 Developed with python 3.11.7
