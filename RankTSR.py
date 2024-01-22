@@ -135,8 +135,8 @@ if __name__ == "__main__":
     # loop through the tsr_periods and calculate the TSR
     for tsr_period in tsr_periods:
         # calculate the tsr for the period
-        print("For period ", tsr_period[0], "==", tsr_period[1].strftime("%Y-%m-%d"), ":",
-              tsr_period[2].strftime("%Y-%m-%d"))
+        print("For period ", tsr_period[0], "(", tsr_period[1].strftime("%Y-%m-%d"), ":",
+              tsr_period[2].strftime("%Y-%m-%d"), ")")
         tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, tsr_period[1], tsr_period[2])
 
         # sort the list by decending tsr to print a table of tickers and their TSR
