@@ -150,7 +150,7 @@ if __name__ == "__main__":
         # sort the list by decending tsr to print a table of tickers and their TSR
         tsr_sorted = tsr_list.sort_values(by='TSR', ascending=False)
 
-        # print the rank of each ticker by TSR 
+        # print the rank of each ticker by TSR
         print(tabulate(tsr_sorted, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'],
                        tablefmt='pretty'))
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         plt.title('TSR for each company from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
                   end_date.strftime("%Y-%m-%d"))
         plt.scatter('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], marker='o', color='red')
-        plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], 
+        plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
                  '   CVE.TO percentile is ' + CVE_Rank, fontsize=10, color='black')
         # save the chart to a file
         plt.savefig('tsr_chart_' + tsr_period[0] + '.png', dpi=600)
