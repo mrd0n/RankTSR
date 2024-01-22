@@ -1,6 +1,6 @@
 """
 For each ticker in the list of tickers:
-- Download the daily price data 
+- Download the daily price data
 - Calulate the Typical Price and VWAP
 - Download the dividends issued
 - Calculate the Total Shareholder Return (TSR)
@@ -92,7 +92,7 @@ if __name__ == "__main__":
                 ['2022',
                     datetime(2022, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
                     datetime(2022, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
-                ['2023', 
+                ['2023',
                     datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
                     datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
                 ['2021-2023',
@@ -168,3 +168,5 @@ if __name__ == "__main__":
         # save the chart to a file
         plt.savefig('tsr_chart_' + tsr_period[0] + '.png')
         # plt.show()
+        # clear the plot
+        plt.clf()
