@@ -164,14 +164,15 @@ if __name__ == "__main__":
         for ticker, tsr in tsr_sorted[['Ticker', 'TSR']].values:
             plt.bar(ticker, tsr)
         plt.xlabel('Ticker')
+        plt.xticks(fontsize=5, rotation=45)
         plt.ylabel('Total Shareholder Return (TSR)')
-        plt.title('TSR for each Ticker from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
+        plt.title('TSR for each company from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
                   end_date.strftime("%Y-%m-%d"))
         plt.scatter('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], marker='o', color='red')
         plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], 
-                 'CVE.TO percentile is ' + CVE_Rank, fontsize=10, color='black')
+                 '   CVE.TO percentile is ' + CVE_Rank, fontsize=10, color='black')
         # save the chart to a file
-        plt.savefig('tsr_chart_' + tsr_period[0] + '.png')
+        plt.savefig('tsr_chart_' + tsr_period[0] + '.png', dpi=600)
         # plt.show()
         # clear the plot
         plt.clf()
