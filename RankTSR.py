@@ -51,6 +51,10 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
         tsr_list.append([ticker, starting_vwap['VWAP'].values[0],
                          ending_vwap['VWAP'].values[0], dividends_total, tsr])
 
+    # calculate the percentile rank of each ticker using the TSR
+    tsr_list = pd.DataFrame(tsr_list, columns=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR'])
+    tsr_list['Rank'] = tsr_list['TSR'].rank(pct=True)
+
     return tsr_list
 
 
@@ -144,32 +148,28 @@ if __name__ == "__main__":
         tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, tsr_period[1], tsr_period[2])
 
         # sort the list by decending tsr to print a table of tickers and their TSR
-        tsr_list.sort(key=lambda x: x[4], reverse=True)
+        tsr_sorted = tsr_list.sort_values(by='TSR', ascending=False)
 
-        # print the rank of each ticker by TSR
-        print(tabulate(tsr_list, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR'],
+        # print the rank of each ticker by TSR 
+        print(tabulate(tsr_sorted, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'],
                        tablefmt='fancy_grid'))
 
-        # Convert the list into a dictionary
-        tsr_list = {x[0]: x[1] for x in tsr_list}
+        CVE_Rank = tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'Rank'].values[0]
+        CVE_Rank = f"{CVE_Rank*100:.2f}%"
 
-        # calculate the number of tickers in the list where ticker 'CVE.TO' has a higher TSR than the others
-        count = sum(1 for ticker, tsr in tsr_list.items() if tsr < tsr_list['CVE.TO'])
-
-        print("CVE.TO has a higher TSR than", count / (len(tsr_list)-1) * 100,
-              "% of it\'s peers for period", tsr_period[0], ".\n\n")
+        # print the TSR vaule from tsr_list for ticker CVE.TO
+        print("The percentile rank for CVE.TO is", CVE_Rank, "\n\n")
 
         # Loop through each ticker and plot the tsr values
-        for ticker, tsr in tsr_list.items():
+        for ticker, tsr in tsr_sorted[['Ticker', 'TSR']].values:
             plt.bar(ticker, tsr)
         plt.xlabel('Ticker')
         plt.ylabel('Total Shareholder Return (TSR)')
         plt.title('TSR for each Ticker from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
                   end_date.strftime("%Y-%m-%d"))
-        plt.scatter('CVE.TO', tsr_list['CVE.TO'], marker='o', color='red')
-        plt.text('CVE.TO', tsr_list['CVE.TO'], 'CVE.TO has a higher TSR than ' +
-                 str(count / (len(tsr_list)-1) * 100) +
-                 '% of it\'s peers.', fontsize=10, color='black')
+        plt.scatter('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], marker='o', color='red')
+        plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], 
+                 'CVE.TO percentile is ' + CVE_Rank, fontsize=10, color='black')
         # save the chart to a file
         plt.savefig('tsr_chart_' + tsr_period[0] + '.png')
         # plt.show()
