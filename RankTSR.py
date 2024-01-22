@@ -152,7 +152,7 @@ if __name__ == "__main__":
 
         # print the rank of each ticker by TSR 
         print(tabulate(tsr_sorted, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'],
-                       tablefmt='fancy_grid'))
+                       tablefmt='pretty'))
 
         CVE_Rank = tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'Rank'].values[0]
         CVE_Rank = f"{CVE_Rank*100:.2f}%"
