@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 
+
 # Function to calculate the Total Shareholder Return (TSR) for a list
 # of provided ticker that returns a list of tickers and their TSR
 def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
@@ -52,29 +53,38 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
 
     return tsr_list
 
+
 if __name__ == "__main__":
-    # The list peer of stocks
-    # Cenovus Energy Corporation (CVE.TO)
-    # Apache Corporation (APA)
-    # Devon Energy Corporation (DVN)
-    # BP Plc. (BP)
-    # Hess Corporation (HES)
-    # Canadian Natural Resources Limited (CNQ.TO)
-    # Imperial Oil Limited (IMO.TO)
-    # Chevron Corporation (CVX)
-    # Ovintiv Inc. (OVV.TO)
-    # ConocoPhillips (COP)
-    # Suncor Energy Inc. (SU.TO)
+    '''
+        The list peer of companies:
+            Cenovus Energy Corporation (CVE.TO)
+            Apache Corporation (APA)
+            Devon Energy Corporation (DVN)
+            BP Plc. (BP)
+            Hess Corporation (HES)
+            Canadian Natural Resources Limited (CNQ.TO)
+            Imperial Oil Limited (IMO.TO)
+            Chevron Corporation (CVX)
+            Ovintiv Inc. (OVV.TO)
+            ConocoPhillips (COP)
+            Suncor Energy Inc. (SU.TO)
+    '''
+    tickers = ['CVE.TO',
+               'CNQ.TO', 'OVV.TO', 'APA', 'DVN', 'BP',
+               'HES', 'IMO.TO', 'CVX', 'COP', 'SU.TO']
 
-    tickers = ['CVE.TO', 'CNQ.TO', 'OVV.TO', 'APA', 'DVN', 'BP', 'HES', 'IMO.TO', 'CVX', 'COP', 'SU.TO']
-
-    # set the end date and start date
+    # set the end date for the price data download
     end_date = datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))
 
     # start_date is 3 years and 30 days before the end_date
     # this should handle leap years
     start_date = end_date - relativedelta(years=3) + relativedelta(days=1)
 
+    # Initialize an empty dataframe to store the daily price data
+    price_data_df = pd.DataFrame()
+    dividend_data_df = pd.DataFrame()
+
+    # define the periods to have the TSR calculated
     tsr_periods = [
                 ['2021',
                     datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
@@ -90,15 +100,11 @@ if __name__ == "__main__":
                     datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))]
                 ]
 
-    # Initialize an empty dataframe to store the stock data
-    price_data_df = pd.DataFrame()
-    dividend_data_df = pd.DataFrame()
-
-    # Download the stock data between the start and end dates
+    # Download the daily price data between the start and end dates
     # including 60 calendar days before the start date so that the 30 day VWAP can be calculated
     for ticker in tickers:
         data = yf.download(ticker, interval='1d', start=start_date-timedelta(days=60),
-                        end=end_date, progress=False)
+                           end=end_date, progress=False)
 
         # normalize the datetime object with timezone 'America/New_York'
         data.index = data.index.tz_localize('America/New_York')
@@ -126,30 +132,27 @@ if __name__ == "__main__":
         # Append the dividends to the dataframe
         dividend_data_df = pd.concat([dividend_data_df, dividends], ignore_index=False)
 
-    # calculate the Total Shareholder Return (TSR) for each ticker
-    tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date)
-
-    # loop through the tsr_periods
+    # loop through the tsr_periods and calculate the TSR
     for tsr_period in tsr_periods:
         # calculate the tsr for the period
-        print("For period ", tsr_period[0], "==", tsr_period[1].strftime("%Y-%m-%d"), ":", 
-            tsr_period[2].strftime("%Y-%m-%d"))
+        print("For period ", tsr_period[0], "==", tsr_period[1].strftime("%Y-%m-%d"), ":",
+              tsr_period[2].strftime("%Y-%m-%d"))
         tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, tsr_period[1], tsr_period[2])
 
-        # sort the list by decending tsr
+        # sort the list by decending tsr to print a table of tickers and their TSR
         tsr_list.sort(key=lambda x: x[1], reverse=True)
 
-        # print the rank of each ticker by TSR using tabulate in a pretty table with borders
+        # print the rank of each ticker by TSR
         print(tabulate(tsr_list, headers=['Ticker', 'TSR'], tablefmt='fancy_grid'))
 
-        # index the tsr list by ticker
+        # Convert the list into a dictionary
         tsr_list = {x[0]: x[1] for x in tsr_list}
 
         # calculate the number of tickers in the list where ticker 'CVE.TO' has a higher TSR than the others
         count = sum(1 for ticker, tsr in tsr_list.items() if tsr < tsr_list['CVE.TO'])
 
         print("CVE.TO has a higher TSR than", count / (len(tsr_list)-1) * 100,
-            "% of it\'s peers for period ", tsr_period[0], ".\n\n")
+              "% of it\'s peers for period ", tsr_period[0], ".\n\n")
 
     '''
         # Loop through each ticker and plot the tsr values
