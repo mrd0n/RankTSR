@@ -152,7 +152,7 @@ if __name__ == "__main__":
         count = sum(1 for ticker, tsr in tsr_list.items() if tsr < tsr_list['CVE.TO'])
 
         print("CVE.TO has a higher TSR than", count / (len(tsr_list)-1) * 100,
-              "% of it\'s peers for period ", tsr_period[0], ".\n\n")
+              "% of it\'s peers for period", tsr_period[0], ".\n\n")
 
     '''
         # Loop through each ticker and plot the tsr values
