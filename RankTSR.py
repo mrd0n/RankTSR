@@ -21,9 +21,18 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-# Function to download the daily price data for a list of tickers
-# and returns a dataframe of the data with calculated VWAP
 def calculate_vwap(tickers, start_date, end_date):
+    """
+    Calculate the volume-weighted average price (VWAP) for the given tickers within the specified start and end dates.
+
+    Parameters:
+    - tickers: list of strings, the tickers of the stocks to calculate VWAP for
+    - start_date: datetime, the start date for the VWAP calculation
+    - end_date: datetime, the end date for the VWAP calculation
+
+    Returns:
+    - pandas DataFrame, the VWAP data for the specified tickers and dates
+    """
 
     data = yf.download(ticker, interval='1d', start=start_date-timedelta(days=60),
                        end=end_date, progress=False)
@@ -46,9 +55,20 @@ def calculate_vwap(tickers, start_date, end_date):
     return data
 
 
-# Function to calculate the Total Shareholder Return (TSR) for a list
-# of provided tickers that returns a list of tickers and their TSR
 def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
+    """
+    Calculate the Total Shareholder Return (TSR) for a list of tickers over a specified period.
+
+    Parameters:
+    - tickers: list of strings representing the tickers to calculate TSR for
+    - price_data_df: DataFrame with price data including VWAP for each ticker
+    - dividend_data_df: DataFrame with dividend data for each ticker
+    - start_date: start date of the period to calculate TSR
+    - end_date: end date of the period to calculate TSR
+
+    Returns:
+    - tsr_list: DataFrame with the calculated TSR for each ticker, including percentile rank
+    """
     # Initialize an empty list to store the ticker and TSR
     tsr_list = []
 
@@ -85,6 +105,9 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
 
 
 def plot_tsr(tsr_df):
+    """
+    Loop through each ticker and plot the tsr values
+    """
     # Loop through each ticker and plot the tsr values
     for ticker, tsr in tsr_df[['Ticker', 'TSR']].values:
         plt.bar(ticker, tsr)
@@ -191,4 +214,3 @@ if __name__ == "__main__":
 
         # plot the tsr values
         plot_tsr(tsr_sorted)
-        
