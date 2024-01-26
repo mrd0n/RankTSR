@@ -1,13 +1,3 @@
-"""
-For each ticker in the list of tickers:
-- Download the daily price data
-- Calulate the Typical Price and VWAP
-- Download the dividends issued
-- Calculate 30 day VWAP - trading days
-- Calculate the Total Shareholder Return (TSR)
-- TSR = (Ending 30 day VWAP - Starting 30 Day VWAP + Dividends) / Starting 30 day VWAP
-"""
-
 import pandas as pd
 import pytz
 import yfinance as yf
@@ -15,6 +5,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from tabulate import tabulate
 import matplotlib.pyplot as plt
+from prettytable import PrettyTable
 
 # Ignore warnings in deprecated packages
 import warnings
@@ -203,8 +194,19 @@ if __name__ == "__main__":
         tsr_sorted = tsr_list.sort_values(by='TSR', ascending=False)
 
         # print the rank of each ticker by TSR
-        print(tabulate(tsr_sorted, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'],
-                       floatfmt=".2f", tablefmt='pretty', showindex=False))
+        # print(tabulate(tsr_sorted, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'],
+        #             floatfmt=".2f", tablefmt='pretty', showindex=False))
+
+        # print the rank of each ticker by TSR using PrettyTable and format to 2 decimal places
+        table = PrettyTable(['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'])
+        for index, row in tsr_sorted.iterrows():
+            table.add_row([row['Ticker'],
+                           f"{row['Start VWAP']:.2f}",
+                           f"{row['End VWAP']:.2f}",
+                           f"{row['Dividends']:.2f}",
+                           f"{row['TSR']:.2f}",
+                           f"{row['Rank']*100:.2f}%"])
+        print(table)
 
         CVE_Rank = tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'Rank'].values[0]
         CVE_Rank = f"{CVE_Rank*100:.2f}%"

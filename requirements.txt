@@ -1,4 +1,4 @@
 pandas
 pytz
 yfinance
-tabulate
+prettytable
