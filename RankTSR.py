@@ -21,6 +21,31 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
+# Function to download the daily price data for a list of tickers
+# and returns a dataframe of the data with calculated VWAP
+def calculate_vwap(tickers, start_date, end_date):
+
+    data = yf.download(ticker, interval='1d', start=start_date-timedelta(days=60),
+                       end=end_date, progress=False)
+
+    # normalize the datetime object with timezone 'America/New_York'
+    data.index = data.index.tz_localize('America/New_York')
+
+    # Add the ticker to the dataframe
+    data['Ticker'] = ticker
+
+    # Calculate the typical price
+    data['TP'] = (data['High'] + data['Low'] + data['Close']) / 3
+
+    # Calculate the TypicalPriceVolume
+    data['TPV'] = data['TP'] * data['Volume']
+
+    # Calculate the rolling 30 trading day VWAP
+    data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()
+
+    return data
+
+
 # Function to calculate the Total Shareholder Return (TSR) for a list
 # of provided tickers that returns a list of tickers and their TSR
 def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
@@ -57,6 +82,25 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     tsr_list['Rank'] = tsr_list['TSR'].rank(pct=True)
 
     return tsr_list
+
+
+def plot_tsr(tsr_df):
+    # Loop through each ticker and plot the tsr values
+    for ticker, tsr in tsr_df[['Ticker', 'TSR']].values:
+        plt.bar(ticker, tsr)
+    plt.xlabel('Ticker')
+    plt.xticks(fontsize=6, rotation=45)
+    plt.ylabel('Total Shareholder Return (TSR)')
+    plt.title('TSR for each company from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
+              end_date.strftime("%Y-%m-%d"))
+    plt.scatter('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], marker='o', color='red')
+    plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
+             '   CVE.TO percentile is ' + CVE_Rank, fontsize=10, color='black')
+    # save the chart to a file
+    plt.savefig('tsr_chart_' + tsr_period[0] + '.png', dpi=600)
+    # plt.show()
+    # clear the plot
+    plt.clf()
 
 
 if __name__ == "__main__":
@@ -108,31 +152,15 @@ if __name__ == "__main__":
     # Download the daily price data between the start and end dates
     # including 60 calendar days before the start date so that the 30 trading day VWAP can be calculated
     for ticker in tickers:
-        data = yf.download(ticker, interval='1d', start=start_date-timedelta(days=60),
-                           end=end_date, progress=False)
+        data = calculate_vwap(ticker, start_date, end_date)
 
-        # normalize the datetime object with timezone 'America/New_York'
-        data.index = data.index.tz_localize('America/New_York')
-
-        # Add the ticker to the dataframe
-        data['Ticker'] = ticker
-
-        # Calculate the typical price
-        data['TP'] = (data['High'] + data['Low'] + data['Close']) / 3
-
-        # Calculate the TypicalPriceVolume
-        data['TPV'] = data['TP'] * data['Volume']
-
-        # Calculate the rolling 30 trading day VWAP
-        data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()
+        # Append the price and calculated vwap to the dataframe
+        price_data_df = pd.concat([price_data_df, data], ignore_index=False)
 
         # Get the dividends
         dividends = yf.Ticker(ticker).dividends.loc[start_date.strftime("%Y-%m-%d"):end_date.strftime("%Y-%m-%d")].to_frame()
         dividends.index = dividends.index.tz_convert('America/New_York')
         dividends['Ticker'] = ticker
-
-        # Append the price and calculated data to the dataframe
-        price_data_df = pd.concat([price_data_df, data], ignore_index=False)
 
         # Append the dividends to the dataframe
         dividend_data_df = pd.concat([dividend_data_df, dividends], ignore_index=False)
@@ -161,19 +189,6 @@ if __name__ == "__main__":
         # print the TSR vaule from tsr_list for ticker CVE.TO
         print("The percentile rank for CVE.TO is", CVE_Rank, "\n\n")
 
-        # Loop through each ticker and plot the tsr values
-        for ticker, tsr in tsr_sorted[['Ticker', 'TSR']].values:
-            plt.bar(ticker, tsr)
-        plt.xlabel('Ticker')
-        plt.xticks(fontsize=6, rotation=45)
-        plt.ylabel('Total Shareholder Return (TSR)')
-        plt.title('TSR for each company from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
-                  end_date.strftime("%Y-%m-%d"))
-        plt.scatter('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], marker='o', color='red')
-        plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
-                 '   CVE.TO percentile is ' + CVE_Rank, fontsize=10, color='black')
-        # save the chart to a file
-        plt.savefig('tsr_chart_' + tsr_period[0] + '.png', dpi=600)
-        # plt.show()
-        # clear the plot
-        plt.clf()
+        # plot the tsr values
+        plot_tsr(tsr_sorted)
+        
