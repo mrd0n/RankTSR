@@ -3,7 +3,6 @@ import pytz
 import yfinance as yf
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-from tabulate import tabulate
 import matplotlib.pyplot as plt
 from prettytable import PrettyTable
 
@@ -192,10 +191,6 @@ if __name__ == "__main__":
 
         # sort the list by decending tsr to print a table of tickers and their TSR
         tsr_sorted = tsr_list.sort_values(by='TSR', ascending=False)
-
-        # print the rank of each ticker by TSR
-        # print(tabulate(tsr_sorted, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'],
-        #             floatfmt=".2f", tablefmt='pretty', showindex=False))
 
         # print the rank of each ticker by TSR using PrettyTable and format to 2 decimal places
         table = PrettyTable(['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'])
