@@ -3,6 +3,7 @@ For each ticker in the list of tickers:
 - Download the daily price data
 - Calulate the Typical Price and VWAP
 - Download the dividends issued
+- Calculate 30 day VWAP - trading days
 - Calculate the Total Shareholder Return (TSR)
 - TSR = (Ending 30 day VWAP - Starting 30 Day VWAP + Dividends) / Starting 30 day VWAP
 """
@@ -21,19 +22,19 @@ warnings.filterwarnings('ignore')
 
 
 # Function to calculate the Total Shareholder Return (TSR) for a list
-# of provided ticker that returns a list of tickers and their TSR
+# of provided tickers that returns a list of tickers and their TSR
 def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
     # Initialize an empty list to store the ticker and TSR
     tsr_list = []
 
     # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
     for ticker in tickers:
-        # find the starting VWAP
+        # find the starting VWAP by finding the closest trading day to the start_date
         starting_vwap = price_data_df[(price_data_df.index >= start_date) &
                                       (price_data_df.index <= end_date + relativedelta(days=7)) &
                                       (price_data_df['Ticker'] == ticker)].head(1)
 
-        # find the ending VWAP
+        # find the ending VWAP by finding the closest trading day to the end_date
         ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
                                     (price_data_df.index <= end_date) &
                                     (price_data_df['Ticker'] == ticker)].tail(1)
@@ -105,7 +106,7 @@ if __name__ == "__main__":
                 ]
 
     # Download the daily price data between the start and end dates
-    # including 60 calendar days before the start date so that the 30 day VWAP can be calculated
+    # including 60 calendar days before the start date so that the 30 trading day VWAP can be calculated
     for ticker in tickers:
         data = yf.download(ticker, interval='1d', start=start_date-timedelta(days=60),
                            end=end_date, progress=False)
@@ -122,7 +123,7 @@ if __name__ == "__main__":
         # Calculate the TypicalPriceVolume
         data['TPV'] = data['TP'] * data['Volume']
 
-        # Calculate the rolling 30 day VWAP
+        # Calculate the rolling 30 trading day VWAP
         data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()
 
         # Get the dividends
@@ -152,7 +153,7 @@ if __name__ == "__main__":
 
         # print the rank of each ticker by TSR
         print(tabulate(tsr_sorted, headers=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'],
-                       tablefmt='pretty'))
+                       floatfmt=".2f", tablefmt='pretty', showindex=False))
 
         CVE_Rank = tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'Rank'].values[0]
         CVE_Rank = f"{CVE_Rank*100:.2f}%"
