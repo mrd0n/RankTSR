@@ -1,5 +1,6 @@
 import pandas as pd
 import pytz
+from scipy import stats
 import yfinance as yf
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -57,7 +58,7 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     - end_date: end date of the period to calculate TSR
 
     Returns:
-    - tsr_list: DataFrame with the calculated TSR for each ticker, including percentile rank
+    - tsr_list: DataFrame with the calculated TSR for each ticker
     """
     # Initialize an empty list to store the ticker and TSR
     tsr_list = []
@@ -87,14 +88,17 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
         tsr_list.append([ticker, starting_vwap['VWAP'].values[0],
                          ending_vwap['VWAP'].values[0], dividends_total, tsr])
 
-    # calculate the percentile rank of each ticker using the TSR
+    # calculate the order of each ticker using the TSR
     tsr_list = pd.DataFrame(tsr_list, columns=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR'])
-    tsr_list['Rank'] = tsr_list['TSR'].rank(pct=True)
+    tsr_list['Rank'] = tsr_list['TSR'].rank(ascending=False)
+
+    # sort the list by TSR
+    tsr_list = tsr_list.sort_values(by='TSR', ascending=False)
 
     return tsr_list
 
 
-def plot_tsr(tsr_df):
+def plot_tsr(tsr_df, start_date, end_date, CVE_Rank):
     """
     Loop through each ticker and plot the tsr values
     """
@@ -104,11 +108,11 @@ def plot_tsr(tsr_df):
     plt.xlabel('Ticker')
     plt.xticks(fontsize=6, rotation=45)
     plt.ylabel('Total Shareholder Return (TSR)')
-    plt.title('TSR for each company from ' + start_date.strftime("%Y-%m-%d") + ' to ' +
-              end_date.strftime("%Y-%m-%d"))
+    plt.title('TSR for each company from ' + start_date + ' to ' +
+              end_date)
     plt.scatter('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0], marker='o', color='red')
     plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
-             '   CVE.TO percentile is ' + CVE_Rank, fontsize=10, color='black')
+             '   CVE.TO percentile is ' + f"{CVE_Rank:.2f}%", fontsize=10, color='black')
     # save the chart to a file
     plt.savefig('tsr_chart_' + tsr_period[0] + '.png', dpi=600)
     # plt.show()
@@ -150,16 +154,20 @@ if __name__ == "__main__":
     tsr_periods = [
                 ['2021',
                     datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2021, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
+                    datetime(2021, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    0.10],
                 ['2022',
                     datetime(2022, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2022, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
+                    datetime(2022, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    0.10],
                 ['2023',
                     datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))],
+                    datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    0.10],
                 ['2021-2023',
                     datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))]
+                    datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    0.70]
                 ]
 
     # Download the daily price data between the start and end dates
@@ -182,6 +190,8 @@ if __name__ == "__main__":
         # price_data_df.to_csv('price_data.csv')
         # dividend_data_df.to_csv('dividend_data.csv')
 
+    performance_summary = []
+
     # loop through the tsr_periods and calculate the TSR
     for tsr_period in tsr_periods:
         # calculate the tsr for the period
@@ -193,21 +203,61 @@ if __name__ == "__main__":
         tsr_sorted = tsr_list.sort_values(by='TSR', ascending=False)
 
         # print the rank of each ticker by TSR using PrettyTable and format to 2 decimal places
-        table = PrettyTable(['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR', 'Rank'])
+        table = PrettyTable(['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR'])
         for index, row in tsr_sorted.iterrows():
             table.add_row([row['Ticker'],
                            f"{row['Start VWAP']:.2f}",
                            f"{row['End VWAP']:.2f}",
                            f"{row['Dividends']:.2f}",
-                           f"{row['TSR']:.2f}",
-                           f"{row['Rank']*100:.2f}%"])
+                           f"{row['TSR']:.2f}"])
         print(table)
 
-        CVE_Rank = tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'Rank'].values[0]
-        CVE_Rank = f"{CVE_Rank*100:.2f}%"
+        # calculate the percentile rank of CVE.TO
+        # remove the CVE.TO TSR from the list
+        TSRs = tsr_list[tsr_list['Ticker'] != 'CVE.TO']['TSR'].values
+        CVE_TSR = tsr_list[tsr_list['Ticker'] == 'CVE.TO']['TSR'].values[0]
+
+        CVE_Rank = stats.percentileofscore(TSRs, CVE_TSR)
+
+        # calculate CVE Score based on PSU formula interpolated between 0.25 <->.5 and 0.5 <-> 0.9
+        if CVE_Rank < 25:
+            CVE_Score = 0
+        elif CVE_Rank >= 25 and CVE_Rank < 50:
+            CVE_Score = (CVE_Rank - 25) / (50 - 25) * (1.0 - 0.25) + 0.25 + .1
+        elif CVE_Rank >= 50 and CVE_Rank < 90:
+            CVE_Score = (CVE_Rank - 50) / (90 - 50) * (2.0 - 1.0) + 1.0 + .1
+        elif CVE_Rank >= 90:
+            CVE_Score = 2
 
         # print the TSR vaule from tsr_list for ticker CVE.TO
-        print("The percentile rank for CVE.TO is", CVE_Rank, "\n\n")
+        print("The percentile rank for CVE.TO is", f"{CVE_Rank:.2f}%",
+              "and the CVE Score is", f"{CVE_Score:.2f}", "\n\n")
 
-        # plot the tsr values
-        plot_tsr(tsr_sorted)
+        # plot the tsr values for this period
+        plot_tsr(tsr_sorted,
+                 tsr_period[1].strftime("%Y-%m-%d"),
+                 tsr_period[2].strftime("%Y-%m-%d"),
+                 CVE_Rank)
+
+        # add performance of period to performance summary
+        performance_summary.append({'period': tsr_period[0],
+                                    'start': tsr_period[1].strftime("%Y-%m-%d"),
+                                    'end': tsr_period[2].strftime("%Y-%m-%d"),
+                                    'weighting': tsr_period[3],
+                                    'rank': CVE_Rank, 'score': CVE_Score})
+
+    # print the performance summary
+    print("Performance Summary:\n")
+    table = PrettyTable(['Period', 'Start', 'End', 'Weighting', 'Rank', 'Score'])
+    total = 0
+    for row in performance_summary:
+        table.add_row([row['period'],
+                       row['start'],
+                       row['end'],
+                       row['weighting'],
+                       f"{row['rank']:.2f}",
+                       f"{row['score']:.2f}"])
+        total = total + row['weighting'] * row['score']
+    table.add_row(['-', '-', '-', '-', '-', '-'])
+    table.add_row(['Total', '', '', '', '', f"{total:.2f}"])
+    print(table)
