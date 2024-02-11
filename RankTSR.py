@@ -1,5 +1,5 @@
 import pandas as pd
-import pytz
+import os
 from scipy import stats
 import yfinance as yf
 from datetime import datetime, timedelta
@@ -12,38 +12,113 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def calculate_vwap(tickers, start_date, end_date):
+# function to load ticker data from a file and then update for a list of tickers
+# from the last date within the loaded file to latest available from yfinance
+def load_data(tickers):
     """
-    Calculate the volume-weighted average price (VWAP) for the given tickers within the specified start and end dates.
+    Load and update ticker data files for a list of tickers.
 
     Parameters:
-    - tickers: list of strings, the tickers of the stocks to calculate VWAP for
-    - start_date: datetime, the start date for the VWAP calculation
-    - end_date: datetime, the end date for the VWAP calculation
+    - tickers: list of strings, the tickers of the stocks to update
 
     Returns:
-    - pandas DataFrame, the VWAP data for the specified tickers and dates
+    - pandas DataFrame, combined ticker data for the specified tickers
     """
 
-    data = yf.download(ticker, interval='1d', start=start_date-timedelta(days=60),
-                       end=end_date, progress=False)
+    # Initialize an empty dataframe
+    ticker_data = pd.DataFrame()
 
-    # normalize the datetime object with timezone 'America/New_York'
-    data.index = data.index.tz_localize('America/New_York')
+    for ticker in tickers:
+        # Load ticker data from file if it exists
+        if not os.path.exists(ticker + '.csv'):
+            # data = yf.Ticker(ticker)
+            data = yf.download(ticker, '2020-01-01', datetime.today(), progress=False)
+            data['Ticker'] = ticker
 
-    # Add the ticker to the dataframe
-    data['Ticker'] = ticker
+            # Calculate the typical price
+            data['TP'] = (data['High'] + data['Low'] + data['Close']) / 3
 
-    # Calculate the typical price
-    data['TP'] = (data['High'] + data['Low'] + data['Close']) / 3
+            # Calculate the TypicalPriceVolume
+            data['TPV'] = data['TP'] * data['Volume']
 
-    # Calculate the TypicalPriceVolume
-    data['TPV'] = data['TP'] * data['Volume']
+        # Append any new data from yfinance
+        else:
+            data = pd.read_csv(ticker + '.csv')
 
-    # Calculate the rolling 30 trading day VWAP
-    data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()
+            # Convert the Date column to datetime
+            data['Date'] = pd.to_datetime(data['Date'])
 
-    return data
+            # index the ticker data
+            data = data.set_index('Date')
+
+            # find the last date within the loaded file as a datetime
+            last_date = pd.to_datetime(data.index[-1])
+
+            # find the latest date available from yfinance using yf.download
+            last_yfinance_date = yf.download(ticker, start=datetime.today()-timedelta(days=14),
+                                             end=datetime.today(), progress=False).index[-1]
+
+            # update the ticker data
+            if last_date < last_yfinance_date:
+                new_data = yf.download(ticker, start=last_date+timedelta(days=1), progress=False)
+
+                # new_data = new_data.history(start=last_date+timedelta(days=1), period='1d')
+                new_data['Ticker'] = ticker
+
+                # Calculate the typical price
+                new_data['TP'] = (new_data['High'] + new_data['Low'] + new_data['Close']) / 3
+
+                # Calculate the TypicalPriceVolume
+                new_data['TPV'] = new_data['TP'] * new_data['Volume']
+
+                data = pd.concat([data, new_data], ignore_index=False, )
+
+        # Calculate the rolling 30 trading day VWAP
+        data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()
+
+        # save updated ticker data to file
+        data.to_csv(ticker + '.csv', index=True)
+
+        # append updated ticker data to main dataframe
+        ticker_data = pd.concat([ticker_data, data])
+
+    return ticker_data
+
+
+# function to load dividend data for a list of tickers using yfinance
+def load_dividends(tickers):
+    """
+    Load dividend data for a list of tickers using yfinance.
+
+    Parameters:
+    - tickers: list of strings, the tickers of the stocks to load dividend data for
+
+    Returns:
+    - pandas DataFrame, combined dividend data for the specified tickers
+    """
+    # Initialize an empty dataframe
+    dividend_data = pd.DataFrame()
+
+    for ticker in tickers:
+        # Load dividend data from yfinance
+        data = yf.Ticker(ticker).dividends
+        data = pd.DataFrame(data)
+        data['Ticker'] = ticker
+
+        # Convert the Date column to datetime with naive time
+        # ata.index = pd.to_datetime(data.index).tz_localize(None)
+
+        # remove timezone information and format to yyyy-mm-dd
+        data.index = data.index.tz_localize(None).strftime('%Y-%m-%d')
+        data.index = pd.to_datetime(data.index)
+
+        # save updated dividend data to file
+        # data.to_csv(ticker + '_dividends.csv', index=True)
+
+        # append updated dividend data to main dataframe
+        dividend_data = pd.concat([dividend_data, data])
+
+    return dividend_data
 
 
 def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
@@ -53,7 +128,6 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     Parameters:
     - tickers: list of strings representing the tickers to calculate TSR for
     - price_data_df: DataFrame with price data including VWAP for each ticker
-    - dividend_data_df: DataFrame with dividend data for each ticker
     - start_date: start date of the period to calculate TSR
     - end_date: end date of the period to calculate TSR
 
@@ -66,14 +140,18 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
     for ticker in tickers:
         # find the starting VWAP by finding the closest trading day to the start_date
-        starting_vwap = price_data_df[(price_data_df.index >= start_date) &
-                                      (price_data_df.index <= end_date + relativedelta(days=7)) &
-                                      (price_data_df['Ticker'] == ticker)].head(1)
+        starting_vwap = price_data_df[(price_data_df.index >= start_date - relativedelta(days=7)) &
+                                      (price_data_df.index < start_date) &
+                                      (price_data_df['Ticker'] == ticker)].tail(1)
+        starting_vwap_date = starting_vwap.index[0]
+        starting_vwap = starting_vwap['VWAP'].values[0]
 
         # find the ending VWAP by finding the closest trading day to the end_date
         ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
                                     (price_data_df.index <= end_date) &
                                     (price_data_df['Ticker'] == ticker)].tail(1)
+        ending_vwap_date = ending_vwap.index[0]
+        ending_vwap = ending_vwap['VWAP'].values[0]
 
         # Calculate the total amount of dividends issued over the period for CVE
         dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
@@ -81,12 +159,17 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
                                            (dividend_data_df.index <= end_date)]['Dividends'].sum()
 
         # Calculate the total shareholder return (TSR)
-        tsr = (ending_vwap['VWAP'].values[0] - starting_vwap['VWAP'].values[0] +
-               dividends_total) / starting_vwap['VWAP'].values[0]
+        tsr = (ending_vwap - starting_vwap + dividends_total) / starting_vwap
 
         # Append the ticker and TSR to the list
-        tsr_list.append([ticker, starting_vwap['VWAP'].values[0],
-                         ending_vwap['VWAP'].values[0], dividends_total, tsr])
+        tsr_list.append([ticker, starting_vwap, ending_vwap, dividends_total, tsr])
+
+        if ticker == 'CVE.TO':
+            # print starting and ending VWAP and dates
+            print(ticker + ' starting VWAP date: ' +
+                  starting_vwap_date.strftime("%Y-%m-%d") + ' VWAP: ' + str(starting_vwap))
+            print(ticker + ' ending VWAP date: ' +
+                  ending_vwap_date.strftime("%Y-%m-%d") + ' VWAP: ' + str(ending_vwap))
 
     # calculate the order of each ticker using the TSR
     tsr_list = pd.DataFrame(tsr_list, columns=['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR'])
@@ -102,6 +185,7 @@ def plot_tsr(tsr_df, start_date, end_date, CVE_Rank):
     """
     Loop through each ticker and plot the tsr values
     """
+
     # Loop through each ticker and plot the tsr values
     for ticker, tsr in tsr_df[['Ticker', 'TSR']].values:
         plt.bar(ticker, tsr)
@@ -139,56 +223,31 @@ if __name__ == "__main__":
                'CNQ.TO', 'OVV.TO', 'APA', 'DVN', 'BP',
                'HES', 'IMO.TO', 'CVX', 'COP', 'SU.TO']
 
-    # set the end date for the price data download
-    end_date = datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York'))
+    # load data for the tickers
+    price_data_df = load_data(tickers)
 
-    # start_date is 3 years and 30 days before the end_date
-    # this should handle leap years
-    start_date = end_date - relativedelta(years=3) + relativedelta(days=1)
-
-    # Initialize an empty dataframe to store the daily price data
-    price_data_df = pd.DataFrame()
-    dividend_data_df = pd.DataFrame()
+    # load dividend data for the tickers
+    dividend_data_df = load_dividends(tickers)
 
     # define the periods to have the TSR calculated
     tsr_periods = [
                 ['2021',
-                    datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2021, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    datetime(2021, 1, 1, 12, 0, 0),
+                    datetime(2021, 12, 31, 12, 0, 0),
                     0.10],
                 ['2022',
-                    datetime(2022, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2022, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    datetime(2022, 1, 1, 12, 0, 0),
+                    datetime(2022, 12, 31, 12, 0, 0),
                     0.10],
                 ['2023',
-                    datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    datetime(2023, 1, 1, 12, 0, 0),
+                    datetime(2023, 12, 31, 12, 0, 0),
                     0.10],
                 ['2021-2023',
-                    datetime(2021, 1, 1, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
-                    datetime(2023, 12, 31, 12, 0, 0, tzinfo=pytz.timezone('America/New_York')),
+                    datetime(2021, 1, 1, 12, 0, 0),
+                    datetime(2023, 12, 31, 12, 0, 0),
                     0.70]
                 ]
-
-    # Download the daily price data between the start and end dates
-    # including 60 calendar days before the start date so that the 30 trading day VWAP can be calculated
-    for ticker in tickers:
-        data = calculate_vwap(ticker, start_date, end_date)
-
-        # Append the price and calculated vwap to the dataframe
-        price_data_df = pd.concat([price_data_df, data], ignore_index=False)
-
-        # Get the dividends
-        dividends = yf.Ticker(ticker).dividends.loc[start_date.strftime("%Y-%m-%d"):end_date.strftime("%Y-%m-%d")].to_frame()
-        dividends.index = dividends.index.tz_convert('America/New_York')
-        dividends['Ticker'] = ticker
-
-        # Append the dividends to the dataframe
-        dividend_data_df = pd.concat([dividend_data_df, dividends], ignore_index=False)
-
-        # save the dataframe to a csv file
-        # price_data_df.to_csv('price_data.csv')
-        # dividend_data_df.to_csv('dividend_data.csv')
 
     performance_summary = []
 
@@ -197,7 +256,8 @@ if __name__ == "__main__":
         # calculate the tsr for the period
         print("For period ", tsr_period[0], "(", tsr_period[1].strftime("%Y-%m-%d"), ":",
               tsr_period[2].strftime("%Y-%m-%d"), ")")
-        tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df, tsr_period[1], tsr_period[2])
+        tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df,
+                                 tsr_period[1], tsr_period[2])
 
         # sort the list by decending tsr to print a table of tickers and their TSR
         tsr_sorted = tsr_list.sort_values(by='TSR', ascending=False)
@@ -206,10 +266,10 @@ if __name__ == "__main__":
         table = PrettyTable(['Ticker', 'Start VWAP', 'End VWAP', 'Dividends', 'TSR'])
         for index, row in tsr_sorted.iterrows():
             table.add_row([row['Ticker'],
-                           f"{row['Start VWAP']:.2f}",
-                           f"{row['End VWAP']:.2f}",
-                           f"{row['Dividends']:.2f}",
-                           f"{row['TSR']:.2f}"])
+                           f"{row['Start VWAP']:4f}",
+                           f"{row['End VWAP']:.4f}",
+                           f"{row['Dividends']:.4f}",
+                           f"{row['TSR']:.4f}"])
         print(table)
 
         # calculate the percentile rank of CVE.TO
@@ -217,17 +277,17 @@ if __name__ == "__main__":
         TSRs = tsr_list[tsr_list['Ticker'] != 'CVE.TO']['TSR'].values
         CVE_TSR = tsr_list[tsr_list['Ticker'] == 'CVE.TO']['TSR'].values[0]
 
-        CVE_Rank = stats.percentileofscore(TSRs, CVE_TSR)
+        CVE_Rank = stats.percentileofscore(TSRs, CVE_TSR)/100
 
-        # calculate CVE Score based on PSU formula interpolated between 0.25 <->.5 and 0.5 <-> 0.9
-        if CVE_Rank < 25:
-            CVE_Score = 0
-        elif CVE_Rank >= 25 and CVE_Rank < 50:
-            CVE_Score = (CVE_Rank - 25) / (50 - 25) * (1.0 - 0.25) + 0.25 + .1
-        elif CVE_Rank >= 50 and CVE_Rank < 90:
-            CVE_Score = (CVE_Rank - 50) / (90 - 50) * (2.0 - 1.0) + 1.0 + .1
-        elif CVE_Rank >= 90:
+        # calculate CVE Score based on PSU formula interpolated between 0.25 <-> 0.5 and 0.5 <-> 0.9
+        if CVE_Rank >= 0.90:
             CVE_Score = 2
+        elif CVE_Rank >= 0.5:
+            CVE_Score = ((CVE_Rank - 0.5) / 0.4) + 1
+        elif CVE_Rank >= 0.25 and CVE_Rank < 0.90:
+            CVE_Score = ((CVE_Rank - 0.25) / 0.25) * 0.75 + 0.25
+        else:
+            CVE_Score = 0
 
         # print the TSR vaule from tsr_list for ticker CVE.TO
         print("The percentile rank for CVE.TO is", f"{CVE_Rank:.2f}%",
