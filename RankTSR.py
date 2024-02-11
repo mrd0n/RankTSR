@@ -12,8 +12,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-# function to load ticker data from a file and then update for a list of tickers
-# from the last date within the loaded file to latest available from yfinance
 def load_data(tickers):
     """
     Load and update ticker data files for a list of tickers.
