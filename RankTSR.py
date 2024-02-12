@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Jan  5 18:12:42 2023
+
+@Author: Don
+"""
+
 import pandas as pd
 import os
 from scipy import stats
