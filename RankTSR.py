@@ -229,7 +229,7 @@ def plot_tsr(tsr_df, start_date, end_date, CVE_Rank):
     """
     Loop through each ticker and plot the tsr values
     """
-    return
+
     # Loop through each ticker and plot the tsr values
     for ticker, tsr in tsr_df[['Ticker', 'TSR']].values:
         plt.bar(ticker, tsr)
