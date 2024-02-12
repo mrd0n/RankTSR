@@ -37,6 +37,6 @@ Example output:
     |   Total   |            |            |           |      |  1.74 |
     +-----------+------------+------------+-----------+------+-------+
 
-![example chart](https://github.com/mrd0n/RankTSR/blob/main/tsr_chart_2021-All years.png "2021-2023 example")
+![example chart](https://raw.githubusercontent.com/mrd0n/RankTSR/main/tsr_chart_2021-All%20years.png "2021-2023 example")
 
 Developed with python 3.11.7
