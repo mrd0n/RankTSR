@@ -137,6 +137,10 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
 
     # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
     for ticker in tickers:
+        # if period is in the future, continue the loop
+        if start_date > datetime.now() or end_date > datetime.now():
+            continue
+
         # find the starting VWAP by finding the closest trading day to the start_date
         starting_vwap = price_data_df[(price_data_df.index >= start_date - relativedelta(days=7)) &
                                       (price_data_df.index < start_date) &
@@ -195,6 +199,10 @@ def populate_full_tsr(tickers, price_data_df, dividend_data_df, start_date, end_
 
     # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
     for ticker in tickers:
+        # if period is in the future, continue the loop
+        if start_date > datetime.now() or end_date > datetime.now():
+            continue
+
         # find the starting VWAP by finding the closest trading day to the start_date
         starting_vwap = price_data_df[(price_data_df.index >= start_date - relativedelta(days=7)) &
                                       (price_data_df.index < start_date) &
@@ -229,7 +237,7 @@ def plot_tsr(tsr_df, start_date, end_date, CVE_Rank):
     """
     Loop through each ticker and plot the tsr values
     """
-
+    return
     # Loop through each ticker and plot the tsr values
     for ticker, tsr in tsr_df[['Ticker', 'TSR']].values:
         plt.bar(ticker, tsr)
@@ -275,21 +283,37 @@ if __name__ == "__main__":
 
     # define the periods to have the TSR calculated
     tsr_periods = [
-                ['2021',
+                ['2021-Year 1',
                     datetime(2021, 1, 1, 12, 0, 0),
                     datetime(2021, 12, 31, 12, 0, 0),
                     0.10],
-                ['2022',
+                ['2021-Year 2',
                     datetime(2022, 1, 1, 12, 0, 0),
                     datetime(2022, 12, 31, 12, 0, 0),
                     0.10],
-                ['2023',
+                ['2021-Year 3',
                     datetime(2023, 1, 1, 12, 0, 0),
                     datetime(2023, 12, 31, 12, 0, 0),
                     0.10],
-                ['2021-2023',
+                ['2021-All years',
                     datetime(2021, 1, 1, 12, 0, 0),
                     datetime(2023, 12, 31, 12, 0, 0),
+                    0.70],
+                ['2022-Year 1',
+                    datetime(2022, 1, 1, 12, 0, 0),
+                    datetime(2022, 12, 31, 12, 0, 0),
+                    0.10],
+                ['2022-Year 2',
+                    datetime(2023, 1, 1, 12, 0, 0),
+                    datetime(2023, 12, 31, 12, 0, 0),
+                    0.10],
+                ['2022-Year 3',
+                    datetime(2024, 1, 1, 12, 0, 0),
+                    datetime(2024, 12, 31, 12, 0, 0),
+                    0.10],
+                ['2022-All years',
+                    datetime(2022, 1, 1, 12, 0, 0),
+                    datetime(2024, 12, 31, 12, 0, 0),
                     0.70]
                 ]
 
@@ -297,6 +321,10 @@ if __name__ == "__main__":
 
     # loop through the tsr_periods and calculate the TSR
     for tsr_period in tsr_periods:
+        # if period is in the future, continue the loop
+        if tsr_period[1] > datetime.now() or tsr_period[2] > datetime.now():
+            continue
+
         # compute tsr to date for period
         price_data_df = populate_full_tsr(tickers, price_data_df, dividend_data_df,
                                           tsr_period[1], tsr_period[2], tsr_period[0])
@@ -304,6 +332,11 @@ if __name__ == "__main__":
         # calculate the tsr for the period
         print("For period ", tsr_period[0], "(", tsr_period[1].strftime("%Y-%m-%d"), ":",
               tsr_period[2].strftime("%Y-%m-%d"), ")")
+
+        # if period is in the future, continue the loop
+        if tsr_period[1] > datetime.now() and tsr_period[1] > datetime.now():
+            continue
+
         tsr_list = calculate_tsr(tickers, price_data_df, dividend_data_df,
                                  tsr_period[1], tsr_period[2])
 
@@ -379,6 +412,9 @@ if __name__ == "__main__":
     print(table)
 
     for period in tsr_periods:
+        # if period is in the future, continue the loop
+        if period[1] > datetime.now() or period[2] > datetime.now():
+            continue
         for ticker in price_data_df['Ticker'].unique():
             ticker_data = price_data_df[price_data_df['Ticker'] == ticker]
             if ticker == 'CVE.TO':
