@@ -179,11 +179,57 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     return tsr_list
 
 
+def populate_full_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date, period_name):
+    """
+    Calculate the Total Shareholder Return (TSR) for a list of tickers over a specified period.
+
+    Parameters:
+    - tickers: list of strings representing the tickers to calculate TSR for
+    - price_data_df: DataFrame with price data including VWAP for each ticker
+    - start_date: start date of the period to calculate TSR
+    - end_date: end date of the period to calculate TSR
+
+    Returns:
+    - tsr_list: DataFrame with the calculated TSR for each ticker
+    """
+
+    # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
+    for ticker in tickers:
+        # find the starting VWAP by finding the closest trading day to the start_date
+        starting_vwap = price_data_df[(price_data_df.index >= start_date - relativedelta(days=7)) &
+                                      (price_data_df.index < start_date) &
+                                      (price_data_df['Ticker'] == ticker)].tail(1)
+        starting_vwap_date = starting_vwap.index[0]
+        starting_vwap = starting_vwap['VWAP'].values[0]
+
+        # find the ending VWAP by finding the closest trading day to the end_date
+        ending_vwap = price_data_df[(price_data_df.index >= end_date - relativedelta(days=7)) &
+                                    (price_data_df.index <= end_date) &
+                                    (price_data_df['Ticker'] == ticker)].tail(1)
+        ending_vwap_date = ending_vwap.index[0]
+
+        period_df = price_data_df[(price_data_df.index >= starting_vwap_date) &
+                                  (price_data_df.index <= ending_vwap_date) &
+                                  (price_data_df['Ticker'] == ticker)]
+
+        period_dividend_df = dividend_data_df[(dividend_data_df.index >= starting_vwap_date) &
+                                              (dividend_data_df.index <= ending_vwap_date) &
+                                              (dividend_data_df['Ticker'] == ticker)]
+
+        period_df[period_name+'_TSR_to_date'] = (period_df['VWAP'] - starting_vwap +
+                                                 period_dividend_df['Dividends'].sum()) / starting_vwap
+
+        # Calc TSR for period and ticker within price_data_df
+        price_data_df.loc[price_data_df['Ticker'] == ticker, period_name+'_TSR'] = period_df[period_name+'_TSR_to_date']
+
+    return price_data_df
+
+
 def plot_tsr(tsr_df, start_date, end_date, CVE_Rank):
     """
     Loop through each ticker and plot the tsr values
     """
-
+    return
     # Loop through each ticker and plot the tsr values
     for ticker, tsr in tsr_df[['Ticker', 'TSR']].values:
         plt.bar(ticker, tsr)
@@ -251,6 +297,10 @@ if __name__ == "__main__":
 
     # loop through the tsr_periods and calculate the TSR
     for tsr_period in tsr_periods:
+        # compute tsr to date for period
+        price_data_df = populate_full_tsr(tickers, price_data_df, dividend_data_df,
+                                          tsr_period[1], tsr_period[2], tsr_period[0])
+
         # calculate the tsr for the period
         print("For period ", tsr_period[0], "(", tsr_period[1].strftime("%Y-%m-%d"), ":",
               tsr_period[2].strftime("%Y-%m-%d"), ")")
@@ -270,12 +320,17 @@ if __name__ == "__main__":
                            f"{row['TSR']:.4f}"])
         print(table)
 
-        # calculate the percentile rank of CVE.TO
-        # remove the CVE.TO TSR from the list
+        # calculate the percentile rank of CVE.TO removing CVE.TO TSR from the list
         TSRs = tsr_list[tsr_list['Ticker'] != 'CVE.TO']['TSR'].values
         CVE_TSR = tsr_list[tsr_list['Ticker'] == 'CVE.TO']['TSR'].values[0]
 
         CVE_Rank = stats.percentileofscore(TSRs, CVE_TSR)/100
+
+        # Interpolate the percentile rank of CVE.TO between the rank above and below
+        if CVE_Rank < 0.9 and CVE_Rank > 0.25:
+            above = tsr_list[tsr_list['TSR'] > CVE_TSR]['TSR'].values.min()
+            below = tsr_list[tsr_list['TSR'] < CVE_TSR]['TSR'].values.max()
+            CVE_Rank += ((CVE_TSR - below) / (above - below))*1/tsr_list['TSR'].count()
 
         # calculate CVE Score based on PSU formula interpolated between 0.25 <-> 0.5 and 0.5 <-> 0.9
         if CVE_Rank >= 0.90:
@@ -304,6 +359,9 @@ if __name__ == "__main__":
                                     'weighting': tsr_period[3],
                                     'rank': CVE_Rank, 'score': CVE_Score})
 
+    # write the detailed_tsr to a csv file
+    price_data_df.to_csv('detailed_tsr.csv')
+
     # print the performance summary
     print("Performance Summary:\n")
     table = PrettyTable(['Period', 'Start', 'End', 'Weighting', 'Rank', 'Score'])
@@ -319,3 +377,21 @@ if __name__ == "__main__":
     table.add_row(['-', '-', '-', '-', '-', '-'])
     table.add_row(['Total', '', '', '', '', f"{total:.2f}"])
     print(table)
+
+    for period in tsr_periods:
+        for ticker in price_data_df['Ticker'].unique():
+            ticker_data = price_data_df[price_data_df['Ticker'] == ticker]
+            if ticker == 'CVE.TO':
+                line_width = 4
+            else:
+                line_width = 2
+            plt.plot(ticker_data.index, ticker_data[str(period[0])+'_TSR'],
+                     label=ticker, linewidth=line_width)
+
+        plt.xlabel('Date')
+        plt.xticks(fontsize=6, rotation=45)
+        plt.ylabel(str(period[0]))
+        plt.title(str(period[0]) + ' TSR for each Ticker')
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.grid(True)
+        plt.show()
