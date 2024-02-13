@@ -5,6 +5,8 @@ Created on Thu Jan  5 18:12:42 2023
 @Author: Don
 """
 
+import configparser
+import ast
 import pandas as pd
 import os
 from scipy import stats
@@ -31,12 +33,12 @@ def load_data(tickers):
     # Initialize an empty dataframe
     price_data_df = pd.DataFrame()
 
-    if not os.path.exists('detailed_tsr.csv'):
+    if not os.path.exists('data/detailed_tsr.csv'):
         # print error and abort
         print("Error: Detailed TSR data file not found. Run refresh-data.py.")
         return
     else:
-        price_data_df = pd.read_csv('detailed_tsr.csv')
+        price_data_df = pd.read_csv('data/detailed_tsr.csv')
         # Convert the Date column to datetime and index on it
         price_data_df['Date'] = pd.to_datetime(price_data_df['Date'])
         price_data_df = price_data_df.set_index('Date')
@@ -58,12 +60,12 @@ def load_dividends(tickers):
     # Initialize an empty dataframe
     dividend_data = pd.DataFrame()
 
-    if not os.path.exists('dividend_data.csv'):
+    if not os.path.exists('data/dividend_data.csv'):
         # print error and abort
         print("Error: Dividend data file not found. Run refresh-data.py.")
         return
     else:
-        dividend_data = pd.read_csv('dividend_data.csv')
+        dividend_data = pd.read_csv('data/dividend_data.csv')
         # Convert the Date column to datetime and index on it
         dividend_data['Date'] = pd.to_datetime(dividend_data['Date'])
         dividend_data = dividend_data.set_index('Date')
@@ -152,7 +154,7 @@ def plot_tsr_ranking(tsr_df, start_date, end_date, CVE_Rank):
     plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
              '   CVE.TO percentile is ' + f"{CVE_Rank:.2f}%", fontsize=10, color='black')
     # save the chart to a file
-    plt.savefig('tsr_chart_' + tsr_period[0] + '.png', dpi=600)
+    plt.savefig('charts/tsr_chart_' + tsr_period[0] + '.png', dpi=600)
     # plt.show()
     # clear the plot
     plt.clf()
@@ -182,7 +184,7 @@ def plot_tsr_timeline(price_data_df, tsr_periods):
         plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
         plt.grid(True)
         # save the chart to a file
-        plt.savefig('tsr_timeline_' + period[0] + '.png', dpi=600)
+        plt.savefig('charts/tsr_timeline_' + period[0] + '.png', dpi=600)
         # plt.show()
         # clear the plot
         plt.clf()
@@ -205,45 +207,20 @@ if __name__ == "__main__":
             ConocoPhillips (COP)
             Suncor Energy Inc. (SU.TO)
     '''
-    tickers = ['CVE.TO',
-               'CNQ.TO', 'OVV.TO', 'APA', 'DVN', 'BP',
-               'HES', 'IMO.TO', 'CVX', 'COP', 'SU.TO']
 
-    # define the periods to have the TSR calculated
-    tsr_periods = [
-                ['2021-Year 1',
-                    datetime(2021, 1, 1, 12, 0, 0),
-                    datetime(2021, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2021-Year 2',
-                    datetime(2022, 1, 1, 12, 0, 0),
-                    datetime(2022, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2021-Year 3',
-                    datetime(2023, 1, 1, 12, 0, 0),
-                    datetime(2023, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2021-All years',
-                    datetime(2021, 1, 1, 12, 0, 0),
-                    datetime(2023, 12, 31, 12, 0, 0),
-                    0.70],
-                ['2022-Year 1',
-                    datetime(2022, 1, 1, 12, 0, 0),
-                    datetime(2022, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2022-Year 2',
-                    datetime(2023, 1, 1, 12, 0, 0),
-                    datetime(2023, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2022-Year 3',
-                    datetime(2024, 1, 1, 12, 0, 0),
-                    datetime(2024, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2022-All years',
-                    datetime(2022, 1, 1, 12, 0, 0),
-                    datetime(2024, 12, 31, 12, 0, 0),
-                    0.70]
-                ]
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    # read the tickers to have the TSR calculated from config.ini
+    tickers = ast.literal_eval(config.get("settings", "tickers"))
+
+    # read the periods to have the TSR calculated from config.ini
+    tsr_periods = ast.literal_eval(config.get("settings", "tsr_periods"))
+
+    # convert the periods to datetime objects
+    for period in tsr_periods:
+        period[1] = datetime.strptime(period[1], '%Y-%m-%d')
+        period[2] = datetime.strptime(period[2], '%Y-%m-%d')
 
     # load data for the tickers
     price_data_df = load_data(tickers)

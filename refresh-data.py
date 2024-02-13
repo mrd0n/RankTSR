@@ -10,6 +10,8 @@ Created on Thu Jan  5 18:12:42 2023
 @Author: Don
 """
 
+import configparser
+import ast
 import pandas as pd
 import os
 import yfinance as yf
@@ -37,7 +39,7 @@ def load_data(tickers):
 
     for ticker in tickers:
         # Load ticker data from file if it exists
-        if not os.path.exists(ticker + '.csv'):
+        if not os.path.exists('data/' + ticker + '.csv'):
             # data = yf.Ticker(ticker)
             data = yf.download(ticker, '2020-01-01', datetime.today(), progress=False)
             data['Ticker'] = ticker
@@ -50,7 +52,7 @@ def load_data(tickers):
 
         # Append any new data from yfinance
         else:
-            data = pd.read_csv(ticker + '.csv')
+            data = pd.read_csv('data/' + ticker + '.csv')
 
             # Convert the Date column to datetime
             data['Date'] = pd.to_datetime(data['Date'])
@@ -89,7 +91,7 @@ def load_data(tickers):
         data['VWAP'] = data['TPV'].rolling(window=30).sum() / data['Volume'].rolling(window=30).sum()
 
         # save updated ticker data to file
-        data.to_csv(ticker + '.csv', index=True)
+        data.to_csv('data/' + ticker + '.csv', index=True)
 
         # append updated ticker data to main dataframe
         ticker_data = pd.concat([ticker_data, data])
@@ -123,9 +125,6 @@ def load_dividends(tickers):
         # remove timezone information and format to yyyy-mm-dd
         data.index = data.index.tz_localize(None).strftime('%Y-%m-%d')
         data.index = pd.to_datetime(data.index)
-
-        # save updated dividend data to file
-        # data.to_csv(ticker + '_dividends.csv', index=True)
 
         # append updated dividend data to main dataframe
         dividend_data = pd.concat([dividend_data, data])
@@ -198,45 +197,20 @@ if __name__ == "__main__":
             ConocoPhillips (COP)
             Suncor Energy Inc. (SU.TO)
     '''
-    tickers = ['CVE.TO',
-               'CNQ.TO', 'OVV.TO', 'APA', 'DVN', 'BP',
-               'HES', 'IMO.TO', 'CVX', 'COP', 'SU.TO']
 
-    # define the periods to have the TSR calculated
-    tsr_periods = [
-                ['2021-Year 1',
-                    datetime(2021, 1, 1, 12, 0, 0),
-                    datetime(2021, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2021-Year 2',
-                    datetime(2022, 1, 1, 12, 0, 0),
-                    datetime(2022, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2021-Year 3',
-                    datetime(2023, 1, 1, 12, 0, 0),
-                    datetime(2023, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2021-All years',
-                    datetime(2021, 1, 1, 12, 0, 0),
-                    datetime(2023, 12, 31, 12, 0, 0),
-                    0.70],
-                ['2022-Year 1',
-                    datetime(2022, 1, 1, 12, 0, 0),
-                    datetime(2022, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2022-Year 2',
-                    datetime(2023, 1, 1, 12, 0, 0),
-                    datetime(2023, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2022-Year 3',
-                    datetime(2024, 1, 1, 12, 0, 0),
-                    datetime(2024, 12, 31, 12, 0, 0),
-                    0.10],
-                ['2022-All years',
-                    datetime(2022, 1, 1, 12, 0, 0),
-                    datetime(2024, 12, 31, 12, 0, 0),
-                    0.70]
-                ]
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    # read the tickers to have the TSR calculated from config file
+    tickers = ast.literal_eval(config.get("settings", "tickers"))
+
+    # read the periods to have the TSR calculated from config file
+    tsr_periods = ast.literal_eval(config.get("settings", "tsr_periods"))
+
+    # convert the periods to datetime objects
+    for period in tsr_periods:
+        period[1] = datetime.strptime(period[1], '%Y-%m-%d')
+        period[2] = datetime.strptime(period[2], '%Y-%m-%d')
 
     # load data for the tickers
     price_data_df = load_data(tickers)
@@ -259,9 +233,9 @@ if __name__ == "__main__":
               tsr_period[2].strftime("%Y-%m-%d"), ")")
 
     # write the detailed_tsr to a csv file
-    price_data_df.to_csv('detailed_tsr.csv')
+    price_data_df.to_csv('data/detailed_tsr.csv')
 
     # write the dividend_data to a csv file
-    dividend_data_df.to_csv('dividend_data.csv')
+    dividend_data_df.to_csv('data/dividend_data.csv')
 
     print("Done!")

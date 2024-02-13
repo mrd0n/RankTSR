@@ -1,6 +1,7 @@
+configparser
 pandas
+pyarrow
 yfinance
 scipy
 prettytable
 matplotlib
-pyarrow
