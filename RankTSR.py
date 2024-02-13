@@ -135,11 +135,11 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     return tsr_list
 
 
-def plot_tsr(tsr_df, start_date, end_date, CVE_Rank):
+def plot_tsr_ranking(tsr_df, start_date, end_date, CVE_Rank):
     """
     Loop through each ticker and plot the tsr values
     """
-    return
+
     # Loop through each ticker and plot the tsr values
     for ticker, tsr in tsr_df[['Ticker', 'TSR']].values:
         plt.bar(ticker, tsr)
@@ -156,6 +156,38 @@ def plot_tsr(tsr_df, start_date, end_date, CVE_Rank):
     # plt.show()
     # clear the plot
     plt.clf()
+
+
+def plot_tsr_timeline(price_data_df, tsr_periods):
+    """
+    Loop through each ticker and plot the tsr values
+    """
+    for period in tsr_periods:
+        # if period is in the future, continue the loop
+        if period[1] > datetime.now() or period[2] > datetime.now():
+            continue
+        for ticker in price_data_df['Ticker'].unique():
+            ticker_data = price_data_df[price_data_df['Ticker'] == ticker]
+            if ticker == 'CVE.TO':
+                line_width = 4
+            else:
+                line_width = 2
+            plt.plot(ticker_data.index, ticker_data[str(period[0])+'_TSR'],
+                     label=ticker, linewidth=line_width)
+
+        plt.xlabel('Date')
+        plt.xticks(fontsize=6, rotation=45)
+        plt.ylabel(str(period[0]))
+        plt.title(str(period[0]) + ' TSR for each Ticker')
+        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.grid(True)
+        # save the chart to a file
+        plt.savefig('tsr_timeline_' + period[0] + '.png', dpi=600)
+        # plt.show()
+        # clear the plot
+        plt.clf()
+
+    return
 
 
 if __name__ == "__main__":
@@ -176,12 +208,6 @@ if __name__ == "__main__":
     tickers = ['CVE.TO',
                'CNQ.TO', 'OVV.TO', 'APA', 'DVN', 'BP',
                'HES', 'IMO.TO', 'CVX', 'COP', 'SU.TO']
-
-    # load data for the tickers
-    price_data_df = load_data(tickers)
-
-    # load dividend data for the tickers
-    dividend_data_df = load_dividends(tickers)
 
     # define the periods to have the TSR calculated
     tsr_periods = [
@@ -218,6 +244,12 @@ if __name__ == "__main__":
                     datetime(2024, 12, 31, 12, 0, 0),
                     0.70]
                 ]
+
+    # load data for the tickers
+    price_data_df = load_data(tickers)
+
+    # load dividend data for the tickers
+    dividend_data_df = load_dividends(tickers)
 
     performance_summary = []
 
@@ -278,10 +310,10 @@ if __name__ == "__main__":
               "and the CVE Score is", f"{CVE_Score:.2f}", "\n\n")
 
         # plot the tsr values for this period
-        plot_tsr(tsr_sorted,
-                 tsr_period[1].strftime("%Y-%m-%d"),
-                 tsr_period[2].strftime("%Y-%m-%d"),
-                 CVE_Rank)
+        plot_tsr_ranking(tsr_sorted,
+                         tsr_period[1].strftime("%Y-%m-%d"),
+                         tsr_period[2].strftime("%Y-%m-%d"),
+                         CVE_Rank)
 
         # Extact performance start year
         performance_start_year = tsr_period[0][0:4]
@@ -311,28 +343,9 @@ if __name__ == "__main__":
         # if this row is the last in performance_summary, add a total row
         if not (performance_summary.index(row) == len(performance_summary) - 1):
             if row['set'] != performance_summary[performance_summary.index(row) + 1]['set']:
-                table.add_row(['-', '-', '-', '-', '-', '-'])
                 table.add_row(['Total', '', '', '', '', f"{total:.2f}"])
+                table.add_row(['-', '-', '-', '-', '-', '-'])
                 total = 0
     print(table)
 
-    for period in tsr_periods:
-        # if period is in the future, continue the loop
-        if period[1] > datetime.now() or period[2] > datetime.now():
-            continue
-        for ticker in price_data_df['Ticker'].unique():
-            ticker_data = price_data_df[price_data_df['Ticker'] == ticker]
-            if ticker == 'CVE.TO':
-                line_width = 4
-            else:
-                line_width = 2
-            plt.plot(ticker_data.index, ticker_data[str(period[0])+'_TSR'],
-                     label=ticker, linewidth=line_width)
-
-        plt.xlabel('Date')
-        plt.xticks(fontsize=6, rotation=45)
-        plt.ylabel(str(period[0]))
-        plt.title(str(period[0]) + ' TSR for each Ticker')
-        plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-        plt.grid(True)
-        plt.show()
+    plot_tsr_timeline(price_data_df, tsr_periods)
