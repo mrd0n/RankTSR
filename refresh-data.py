@@ -149,8 +149,12 @@ def populate_full_tsr(tickers, price_data_df, dividend_data_df, start_date, end_
     # Loop through each ticker and calculate the Total Shareholder Return (TSR) for the period
     for ticker in tickers:
         # if period is in the future, continue the loop
-        if start_date > datetime.now() or end_date > datetime.now():
+        if start_date > datetime.now():
             continue
+
+        # if end_date is in the future, set ending_vwap_date to today
+        if end_date > datetime.now():
+            end_date = datetime.now()
 
         # find the starting VWAP by finding the closest trading day to the start_date
         starting_vwap = price_data_df[(price_data_df.index >= start_date - relativedelta(days=7)) &
@@ -226,16 +230,14 @@ if __name__ == "__main__":
     # loop through the tsr_periods and calculate the TSR
     for tsr_period in tsr_periods:
         # if period is in the future, continue the loop
-        if tsr_period[1] > datetime.now() or tsr_period[2] > datetime.now():
+        if tsr_period[1] > datetime.now():
             continue
-
-        # compute tsr to date for period
-        price_data_df = populate_full_tsr(tickers, price_data_df, dividend_data_df,
-                                          tsr_period[1], tsr_period[2], tsr_period[0])
 
         # calculate the tsr for the period
         print("Calculating TSR for period ", tsr_period[0], "(", tsr_period[1].strftime("%Y-%m-%d"), ":",
               tsr_period[2].strftime("%Y-%m-%d"), ")")
+        price_data_df = populate_full_tsr(tickers, price_data_df, dividend_data_df,
+                                          tsr_period[1], tsr_period[2], tsr_period[0])
 
     # write the detailed_tsr to a csv file
     price_data_df.to_csv('data/detailed_tsr.csv')

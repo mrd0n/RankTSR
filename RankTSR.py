@@ -166,7 +166,7 @@ def plot_tsr_timeline(price_data_df, tsr_periods):
     """
     for period in tsr_periods:
         # if period is in the future, continue the loop
-        if period[1] > datetime.now() or period[2] > datetime.now():
+        if period[1] > datetime.now():
             continue
         for ticker in price_data_df['Ticker'].unique():
             ticker_data = price_data_df[price_data_df['Ticker'] == ticker]
