@@ -201,6 +201,11 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read('config.ini')
 
+    folders = ['data', 'charts']
+    for folder in folders:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
     # read the tickers to have the TSR calculated from config file
     tickers = ast.literal_eval(config.get("settings", "tickers"))
 
