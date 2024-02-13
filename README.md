@@ -1,5 +1,8 @@
-Python script to calculate the Total Sharehoder Return for CVE.TO and compare to 
+Python scripts to calculate the Total Shareholder Return for CVE.TO and compare to 
 a list of it's peers over a defined period.
+
+refresh_data.py - handles the price data loading, refresh and calculations
+RankTSR.py - calculates ranking, outputs performance summary and charts 
 
 Example output:
 
