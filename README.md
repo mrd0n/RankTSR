@@ -5,6 +5,8 @@ refresh_data.py - handles the price data loading, refresh and calculations
 
 RankTSR.py - calculates ranking, outputs performance summary and charts 
 
+Make edits to config.ini to change peers and performance periods
+
 Example output:
 
     For period  2021-2023 ( 2021-01-01 : 2023-12-31 )
