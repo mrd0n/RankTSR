@@ -14,6 +14,7 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
 from prettytable import PrettyTable
+import numpy as np
 
 # Ignore warnings in deprecated packages
 import warnings
@@ -164,6 +165,7 @@ def plot_tsr_timeline(price_data_df, tsr_periods):
     """
     Loop through each ticker and plot the tsr values
     """
+
     for period in tsr_periods:
         # if period is in the future, continue the loop
         if period[1] > datetime.now():
@@ -191,6 +193,29 @@ def plot_tsr_timeline(price_data_df, tsr_periods):
 
     return
 
+
+def percent_rank(arr, score, sig_digits=8):
+    arr = np.asarray(arr)
+    arr = np.round(arr, sig_digits)
+    score = np.round(score, sig_digits)
+    if score in arr:
+        small = (arr < score).sum()
+        return small / (len(arr) - 1)
+    else:
+        if score < arr.min():
+            return 0
+        elif score > arr.max():
+            return 1
+        else:
+            arr = np.sort(arr)
+            position = np.searchsorted(arr, score)
+            small = arr[position - 1]
+            large = arr[position]
+            small_rank = ((arr < score).sum() - 1) / (len(arr) - 1)
+            large_rank = ((arr < large).sum()) / (len(arr) - 1)
+            step = (score - small) / (large - small)
+            rank = small_rank + step * (large_rank - small_rank)
+            return rank
 
 if __name__ == "__main__":
     '''
@@ -264,13 +289,14 @@ if __name__ == "__main__":
         TSRs = tsr_list[tsr_list['Ticker'] != 'CVE.TO']['TSR'].values
         CVE_TSR = tsr_list[tsr_list['Ticker'] == 'CVE.TO']['TSR'].values[0]
 
-        CVE_Rank = stats.percentileofscore(TSRs, CVE_TSR)/100
+        # CVE_Rank = stats.percentileofscore(TSRs, CVE_TSR)/100
+        CVE_Rank = percent_rank(pd.Series(TSRs), CVE_TSR, 3)
 
         # Interpolate the percentile rank of CVE.TO between the rank above and below
-        if CVE_Rank < 0.9 and CVE_Rank > 0.25:
-            above = tsr_list[tsr_list['TSR'] > CVE_TSR]['TSR'].values.min()
-            below = tsr_list[tsr_list['TSR'] < CVE_TSR]['TSR'].values.max()
-            CVE_Rank += ((CVE_TSR - below) / (above - below))*1/tsr_list['TSR'].count()
+        # if CVE_Rank < 0.9 and CVE_Rank > 0.25:
+        #    above = tsr_list[tsr_list['TSR'] > CVE_TSR]['TSR'].values.min()
+        #    below = tsr_list[tsr_list['TSR'] < CVE_TSR]['TSR'].values.max()
+        #    CVE_Rank += ((CVE_TSR - below) / (above - below))*1/tsr_list['TSR'].count()
 
         # calculate CVE Score based on PSU formula interpolated between 0.25 <-> 0.5 and 0.5 <-> 0.9
         if CVE_Rank >= 0.90:
@@ -283,7 +309,7 @@ if __name__ == "__main__":
             CVE_Score = 0
 
         # print the TSR vaule from tsr_list for ticker CVE.TO
-        print("The percentile rank for CVE.TO is", f"{CVE_Rank:.2f}%",
+        print("The percentile rank for CVE.TO is", f"{CVE_Rank:.3f}%",
               "and the CVE Score is", f"{CVE_Score:.2f}", "\n\n")
 
         # plot the tsr values for this period
@@ -301,7 +327,8 @@ if __name__ == "__main__":
                                     'start': tsr_period[1].strftime("%Y-%m-%d"),
                                     'end': tsr_period[2].strftime("%Y-%m-%d"),
                                     'weighting': tsr_period[3],
-                                    'rank': CVE_Rank, 'score': CVE_Score})
+                                    'rank': CVE_Rank, 
+                                    'score': CVE_Score})
 
     # print the performance summary
     print("Performance Summary:\n")
@@ -312,7 +339,7 @@ if __name__ == "__main__":
                        row['start'],
                        row['end'],
                        row['weighting'],
-                       f"{row['rank']:.2f}",
+                       f"{row['rank']:.3f}",
                        f"{row['score']:.2f}"])
         total = total + row['weighting'] * row['score']
         # if the next row in performance_summary is for a different set, add a total row
