@@ -165,7 +165,7 @@ def plot_tsr_timeline(price_data_df, tsr_periods):
     """
     Loop through each ticker and plot the tsr values
     """
-
+    
     for period in tsr_periods:
         # if period is in the future, continue the loop
         if period[1] > datetime.now():
