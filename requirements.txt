@@ -2,7 +2,6 @@ configparser
 pandas
 pyarrow
 yfinance
-scipy
 prettytable
 matplotlib
 numpy
