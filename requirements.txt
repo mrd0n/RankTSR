@@ -5,3 +5,4 @@ yfinance
 prettytable
 matplotlib
 numpy
+panel
