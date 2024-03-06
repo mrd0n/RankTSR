@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jan  5 18:12:42 2023
+Calculates the Total Shareholder Return for a list of tickers over a specified set of periods.
+For each defined perdiod displays the performance period summary and saves a ranking chart to a file.
+For each defined period creates and saves a chart of daily TSR values for each ticker over the specified periods.
+
+Created on Thu Jan  5 20:07:32 2024
 
 @Author: Don
 """
@@ -12,6 +16,7 @@ import os
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import matplotlib.pyplot as plt
+# from matplotlib.figure import Figure
 from prettytable import PrettyTable
 import numpy as np
 
@@ -76,6 +81,7 @@ def load_dividends(tickers):
 def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date):
     """
     Calculate the Total Shareholder Return (TSR) for a list of tickers over a specified period.
+      (Betwen the start date and end date)
 
     Parameters:
     - tickers: list of strings representing the tickers to calculate TSR for
@@ -185,72 +191,66 @@ def plot_tsr_ranking(tsr_df, start_date, end_date, CVE_Rank):
     return plt
 
 
-def plot_tsr_timeline(price_data_df, tsr_periods):
+def plot_tsr_timeline(ticker_data, period):
     """
-    Loop through each ticker and plot the tsr values
+    Loop through each ticker and plot the tsr values on a figure
     """
 
-    for period in tsr_periods:
-        # if period is in the future, continue the loop
-        if period[1] > datetime.now():
-            continue
+    # create a figure and axis
+    fig, ax = plt.subplots(figsize=(13.33, 7.5), dpi=96)
+    # fig = Figure()
+    # ax = fig.subplots()
 
-        # create a figure and axis
-        fig, ax = plt.subplots(figsize=(13.33, 7.5), dpi=96)
-        for ticker in price_data_df['Ticker'].unique():
-            ticker_data = price_data_df[price_data_df['Ticker'] == ticker]
-            if ticker == 'CVE.TO':
-                line_width = 3
-            else:
-                line_width = 1
-            plot_data = ticker_data[ticker_data[str(period[0])+'_TSR'].notnull()]
-            ax.plot(plot_data.index, plot_data[str(period[0])+'_TSR'],
-                    label=ticker, linewidth=line_width)
-            ax.plot(plot_data.index.max(), plot_data[str(period[0])+'_TSR'].iloc[-1], 'o', markersize=6, alpha=0.3)
-            ax.plot(plot_data.index.max(), plot_data[str(period[0])+'_TSR'].iloc[-1], 'o', markersize=3)
+    # Loop through each ticker and plot the tsr values
+    for ticker in ticker_data['Ticker'].unique():
+        plot_data = ticker_data[ticker_data['Ticker'] == ticker]
+        if ticker == 'CVE.TO':
+            line_width = 3
+        else:
+            line_width = 1
+        ax.plot(plot_data.index, plot_data[str(period)+'_TSR'],
+                label=ticker, linewidth=line_width)
+        ax.plot(plot_data.index.max(), plot_data[str(period)+'_TSR'].iloc[-1], 'o', markersize=6, alpha=0.3)
+        ax.plot(plot_data.index.max(), plot_data[str(period)+'_TSR'].iloc[-1], 'o', markersize=3)
 
-        # set the legend and labels
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Total Shareholder Return (TSR)', fontsize=12, labelpad=10)
-        ax.legend(loc='best', fontsize=6)
+    # set the legend and labels
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Total Shareholder Return (TSR)', fontsize=12, labelpad=10)
+    ax.legend(loc='best', fontsize=6)
 
-        # set the grid
-        ax.grid(True)
-        ax.grid(which="major", axis='x', color='#DAD8D7', alpha=0.5, zorder=1)
-        ax.grid(which="major", axis='y', color='#DAD8D7', alpha=0.5, zorder=1)
+    # set the grid
+    ax.grid(True)
+    ax.grid(which="major", axis='x', color='#DAD8D7', alpha=0.5, zorder=1)
+    ax.grid(which="major", axis='y', color='#DAD8D7', alpha=0.5, zorder=1)
 
-        # Remove the spines
-        ax.spines[['top', 'right', 'bottom']].set_visible(False)
+    # Remove the spines
+    ax.spines[['top', 'right', 'bottom']].set_visible(False)
 
-        # Make the left spine thicker
-        ax.spines['left'].set_linewidth(1.1)
+    # Make the left spine thicker
+    ax.spines['left'].set_linewidth(1.1)
 
-        # Add in red line and rectangle on top
-        ax.plot([0.05, .9], [.98, .98], transform=fig.transFigure, clip_on=False, color='#E3120B', linewidth=.6)
-        ax.add_patch(plt.Rectangle((0.05, .98), 0.04, -0.02,
-                                   facecolor='#E3120B', transform=fig.transFigure,
-                                   clip_on=False, linewidth=0))
+    # Add in red line and rectangle on top
+    ax.plot([0.05, .9], [.98, .98], transform=fig.transFigure, clip_on=False, color='#E3120B', linewidth=.6)
+    ax.add_patch(plt.Rectangle((0.05, .98), 0.04, -0.02, facecolor='#E3120B', transform=fig.transFigure,
+                               clip_on=False, linewidth=0))
 
-        # Add in title and subtitle
-        ax.text(x=0.05, y=.93, s=str(period[0]) + ' TSR for each Ticker',
-                transform=fig.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
-        ax.text(x=0.05, y=.90, s="Total Shareholder Return",
-                transform=fig.transFigure, ha='left', fontsize=12, alpha=.8)
+    # Add in title and subtitle
+    ax.text(x=0.05, y=.93, s=str(period) + ' TSR for each Ticker',
+            transform=fig.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
+    ax.text(x=0.05, y=.90, s="Total Shareholder Return",
+            transform=fig.transFigure, ha='left', fontsize=12, alpha=.8)
 
-        # Set source text
-        ax.text(x=0.05, y=0.12, s="Source: Stock data from Yahoo Finance",
-                transform=fig.transFigure, ha='left', fontsize=10, alpha=.7)
+    # Set source text
+    ax.text(x=0.05, y=0.12, s="Source: Stock data from Yahoo Finance",
+            transform=fig.transFigure, ha='left', fontsize=10, alpha=.7)
 
-        # Adjust the margins around the plot area
-        plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.85, wspace=None, hspace=None)
+    # Adjust the margins around the plot area
+    plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.85, wspace=None, hspace=None)
 
-        # Set a white background
-        fig.patch.set_facecolor('white')
+    # Set a white background
+    fig.patch.set_facecolor('white')
 
-        # save the chart to a file
-        fig.savefig('charts/tsr_timeline_' + period[0] + '.png', dpi=600)
-
-    return
+    return fig
 
 
 def percent_rank(arr, score, sig_digits=8):
@@ -353,10 +353,10 @@ if __name__ == "__main__":
         CVE_Rank = percent_rank(pd.Series(TSRs), CVE_TSR, 3)
 
         # Interpolate the percentile rank of CVE.TO between the rank above and below
-        # if CVE_Rank < 0.9 and CVE_Rank > 0.25:
-        #    above = tsr_list[tsr_list['TSR'] > CVE_TSR]['TSR'].values.min()
-        #    below = tsr_list[tsr_list['TSR'] < CVE_TSR]['TSR'].values.max()
-        #    CVE_Rank += ((CVE_TSR - below) / (above - below))*1/tsr_list['TSR'].count()
+        if CVE_Rank < 0.9 and CVE_Rank > 0.25:
+            above = tsr_list[tsr_list['TSR'] > CVE_TSR]['TSR'].values.min()
+            below = tsr_list[tsr_list['TSR'] < CVE_TSR]['TSR'].values.max()
+            CVE_Rank += ((CVE_TSR - below) / (above - below))*1/tsr_list['TSR'].count()
         if CVE_Rank >= 0.90:
             CVE_Score = 2
         elif CVE_Rank >= 0.5:
@@ -410,4 +410,17 @@ if __name__ == "__main__":
                 total = 0
     print(table)
 
-    plot_tsr_timeline(price_data_df, tsr_periods)
+    # for each period, plot the daily tsr for each ticker over the timeline
+    for period in tsr_periods:
+        # if period is in the future, continue the loop
+        if period[1] > datetime.now():
+            continue
+
+        # Filter the data to only the period
+        ticker_data = price_data_df[price_data_df[str(period[0])+'_TSR'].notnull()]
+
+        # create the figure plot
+        fig = plot_tsr_timeline(ticker_data, period[0])
+
+        # save the figure to a file
+        fig.savefig('charts/tsr_timeline_' + period[0] + '.png', dpi=600)
