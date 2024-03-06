@@ -5,7 +5,7 @@ Load and Refresh the Ticker Data required to calculate Rolling 30 day VWAP and T
 Shareholder Return (TSR).  Store in CSV files for use by other scripts and
 visualisations.
 
-Created on Thu Jan  5 18:12:42 2023
+Created on Thu Jan  5 18:12:42 2024
 
 @Author: Don
 """
@@ -134,7 +134,8 @@ def load_dividends(tickers):
 
 def populate_full_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date, period_name):
     """
-    Calculate the Total Shareholder Return (TSR) for a list of tickers over a specified period.
+    Calculate the Total Shareholder Return (TSR) for a list of tickers over a specified period
+    for each day in the period.
 
     Parameters:
     - tickers: list of strings representing the tickers to calculate TSR for
