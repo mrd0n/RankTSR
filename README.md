@@ -47,7 +47,7 @@ Example output:
     |  2022-Year 2   | 2023-01-01 | 2023-12-31 |    0.1    | 0.362 |  0.59 |
     +----------------+------------+------------+-----------+-------+-------+
 
-![example ranking chart](https://raw.githubusercontent.com/mrd0n/RankTSR/main/charts/tsr_chart_2021-All%20years.png "2021-2023 example")
+![example ranking chart](https://github.com/mrd0n/RankTSR/blob/main/charts/tsr_chart_2021-All%20years.png?raw=true "2021-2023 example")
 
 ![example daily TSR chart](https://github.com/mrd0n/RankTSR/blob/main/charts/tsr_timeline_2021-All%20years.png?raw=true "2021-2023 example")
 
