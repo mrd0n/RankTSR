@@ -21,12 +21,12 @@ warnings.filterwarnings('ignore')
 pn.extension("perspective", design='material')
 
 
-def update_chart_preview(data, period):
+def update_chart_preview(data, primary_ticker, period):
     try:
         chart_preview.loading = True
         # Filter the data to only the period
         ticker_data = data[data[str(period)+'_TSR'].notnull()]
-        axes = plot_tsr_timeline(ticker_data, period)
+        axes = plot_tsr_timeline(ticker_data, primary_ticker, period)
         plt.close(axes.figure)
         chart_preview.object = axes.figure
         chart_table.object = ticker_data
@@ -36,18 +36,7 @@ def update_chart_preview(data, period):
 
 if __name__ == "__main__":
     '''
-        The list peer of companies:
-            Cenovus Energy Corporation (CVE.TO)
-            Apache Corporation (APA)
-            Devon Energy Corporation (DVN)
-            BP Plc. (BP)
-            Hess Corporation (HES)
-            Canadian Natural Resources Limited (CNQ.TO)
-            Imperial Oil Limited (IMO.TO)
-            Chevron Corporation (CVX)
-            Ovintiv Inc. (OVV.TO)
-            ConocoPhillips (COP)
-            Suncor Energy Inc. (SU.TO)
+    Panel App to display TSR performance over defined period
     '''
 
     config = configparser.ConfigParser()
@@ -55,6 +44,7 @@ if __name__ == "__main__":
 
     # read the tickers to have the TSR calculated from config.ini
     tickers = ast.literal_eval(config.get("settings", "tickers"))
+    primary_ticker = ast.literal_eval(config.get("settings", "primary_ticker"))
 
     # read the periods to have the TSR calculated from config.ini
     tsr_periods = ast.literal_eval(config.get("settings", "tsr_periods"))
@@ -85,13 +75,13 @@ if __name__ == "__main__":
         title="TSR Viewer"
     )
 
-    pn.bind(update_chart_preview, data=price_data_df, period=period_widget, watch=True)
+    pn.bind(update_chart_preview, primary_ticker=primary_ticker, data=price_data_df, period=period_widget, watch=True)
 
     try:
         chart_preview.loading = True
         # Filter the data to only the period
         ticker_data = price_data_df[price_data_df[str(period_names[0])+'_TSR'].notnull()]
-        axes = plot_tsr_timeline(ticker_data, period_names[0])
+        axes = plot_tsr_timeline(ticker_data, primary_ticker, period_names[0])
         plt.close(axes.figure)
         chart_preview.object = axes.figure
         chart_table.object = ticker_data

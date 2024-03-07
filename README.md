@@ -1,11 +1,13 @@
-Python scripts to calculate the Total Shareholder Return for CVE.TO and compare to 
-a list of it's peers over a defined period.
+Python scripts to calculate the Total Shareholder Return for stocks and compare to 
+a list of peers over a defined period.
 
 refresh_data.py - handles the price data loading, refresh and calculations
 
 RankTSR.py - calculates ranking, outputs performance summary and charts 
 
-Make edits to config.ini to change peers and performance periods
+RankTSR.py - a Panel App to display the TSR performance over a selected period
+
+Make edits to config.ini to change peers, primary_ticker and performance periods
 
 Example output:
 

@@ -115,7 +115,7 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
         ending_vwap_date = ending_vwap.index[0]
         ending_vwap = ending_vwap['VWAP'].values[0]
 
-        # Calculate the total amount of dividends issued over the period for CVE
+        # Calculate the total amount of dividends issued over the period for primary_ticker
         dividends_total = dividend_data_df[(dividend_data_df['Ticker'] == ticker) &
                                            (dividend_data_df.index >= start_date) &
                                            (dividend_data_df.index <= end_date)]['Dividends'].sum()
@@ -126,7 +126,7 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
         # Append the ticker and TSR to the list
         tsr_list.append([ticker, starting_vwap, ending_vwap, dividends_total, tsr])
 
-        if ticker == 'CVE.TO':
+        if ticker == primary_ticker:
             # print starting and ending VWAP and dates
             print(ticker + ' starting VWAP date: ' +
                   starting_vwap_date.strftime("%Y-%m-%d") + ' VWAP: ' + str(starting_vwap))
@@ -143,7 +143,7 @@ def calculate_tsr(tickers, price_data_df, dividend_data_df, start_date, end_date
     return tsr_list
 
 
-def plot_tsr_ranking(tsr_df, start_date, end_date, CVE_Rank):
+def plot_tsr_ranking(tsr_df, start_date, end_date, primary_Rank):
     """
     Loop through each ticker and plot the tsr values
     """
@@ -175,13 +175,13 @@ def plot_tsr_ranking(tsr_df, start_date, end_date, CVE_Rank):
     ax.text(x=0.05, y=0.05, s="Source: Stock data from Yahoo Finance",
             transform=fig.transFigure, ha='left', fontsize=10, alpha=.7)
 
-    # mark CVE.TO on the chart
-    plt.plot('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
+    # mark primary_ticker on the chart
+    plt.plot(primary_ticker, tsr_list.loc[tsr_list['Ticker'] == primary_ticker, 'TSR'].values[0],
              marker='o', color='red', markersize=6, alpha=0.3)
-    plt.plot('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
+    plt.plot(primary_ticker, tsr_list.loc[tsr_list['Ticker'] == primary_ticker, 'TSR'].values[0],
              marker='o', color='red', markersize=3)
-    plt.text('CVE.TO', tsr_list.loc[tsr_list['Ticker'] == 'CVE.TO', 'TSR'].values[0],
-             '   CVE.TO percentile is ' + f"{CVE_Rank:.2f}%", fontsize=10, color='black')
+    plt.text(primary_ticker, tsr_list.loc[tsr_list['Ticker'] == primary_ticker, 'TSR'].values[0],
+             '   ' + primary_ticker + ' percentile is ' + f"{primary_Rank:.2f}%", fontsize=10, color='black')
 
     # save the chart to a file
     plt.savefig('charts/tsr_chart_' + tsr_period[0] + '.png', dpi=600)
@@ -191,7 +191,7 @@ def plot_tsr_ranking(tsr_df, start_date, end_date, CVE_Rank):
     return plt
 
 
-def plot_tsr_timeline(ticker_data, period):
+def plot_tsr_timeline(ticker_data, primary_ticker, period):
     """
     Loop through each ticker and plot the tsr values on a figure
     """
@@ -204,7 +204,7 @@ def plot_tsr_timeline(ticker_data, period):
     # Loop through each ticker and plot the tsr values
     for ticker in ticker_data['Ticker'].unique():
         plot_data = ticker_data[ticker_data['Ticker'] == ticker]
-        if ticker == 'CVE.TO':
+        if ticker == primary_ticker:
             line_width = 3
         else:
             line_width = 1
@@ -279,18 +279,8 @@ def percent_rank(arr, score, sig_digits=8):
 
 if __name__ == "__main__":
     '''
-        The list peer of companies:
-            Cenovus Energy Corporation (CVE.TO)
-            Apache Corporation (APA)
-            Devon Energy Corporation (DVN)
-            BP Plc. (BP)
-            Hess Corporation (HES)
-            Canadian Natural Resources Limited (CNQ.TO)
-            Imperial Oil Limited (IMO.TO)
-            Chevron Corporation (CVX)
-            Ovintiv Inc. (OVV.TO)
-            ConocoPhillips (COP)
-            Suncor Energy Inc. (SU.TO)
+    Calculate and print relative performance for each ticker for each period defined in
+    config.ini against the primary_ticker.
     '''
 
     config = configparser.ConfigParser()
@@ -298,6 +288,7 @@ if __name__ == "__main__":
 
     # read the tickers to have the TSR calculated from config.ini
     tickers = ast.literal_eval(config.get("settings", "tickers"))
+    primary_ticker = ast.literal_eval(config.get("settings", "primary_ticker"))
 
     # read the periods to have the TSR calculated from config.ini
     tsr_periods = ast.literal_eval(config.get("settings", "tsr_periods"))
@@ -345,36 +336,37 @@ if __name__ == "__main__":
                            f"{row['TSR']:.4f}"])
         print(table)
 
-        # calculate the percentile rank of CVE.TO removing CVE.TO TSR from the list
-        TSRs = tsr_list[tsr_list['Ticker'] != 'CVE.TO']['TSR'].values
-        CVE_TSR = tsr_list[tsr_list['Ticker'] == 'CVE.TO']['TSR'].values[0]
+        # calculate the percentile rank of primary_ticker removing primary_ticker TSR from the list
+        TSRs = tsr_list[tsr_list['Ticker'] != primary_ticker]['TSR'].values
+        primary_TSR = tsr_list[tsr_list['Ticker'] == primary_ticker]['TSR'].values[0]
 
-        # CVE_Rank = stats.percentileofscore(TSRs, CVE_TSR)/100
-        CVE_Rank = percent_rank(pd.Series(TSRs), CVE_TSR, 3)
+        # primary_Rank = stats.percentileofscore(TSRs, primary_TSR)/100
+        primary_Rank = percent_rank(pd.Series(TSRs), primary_TSR, 3)
 
-        # Interpolate the percentile rank of CVE.TO between the rank above and below
-        if CVE_Rank < 0.9 and CVE_Rank > 0.25:
-            above = tsr_list[tsr_list['TSR'] > CVE_TSR]['TSR'].values.min()
-            below = tsr_list[tsr_list['TSR'] < CVE_TSR]['TSR'].values.max()
-            CVE_Rank += ((CVE_TSR - below) / (above - below))*1/tsr_list['TSR'].count()
-        if CVE_Rank >= 0.90:
-            CVE_Score = 2
-        elif CVE_Rank >= 0.5:
-            CVE_Score = ((CVE_Rank - 0.5) / 0.4) + 1
-        elif CVE_Rank >= 0.25 and CVE_Rank < 0.90:
-            CVE_Score = ((CVE_Rank - 0.25) / 0.25) * 0.75 + 0.25
+        # Interpolate the percentile rank of primary_ticker between the rank above and below
+        if primary_Rank < 0.9 and primary_Rank > 0.25:
+            above = tsr_list[tsr_list['TSR'] > primary_TSR]['TSR'].values.min()
+            below = tsr_list[tsr_list['TSR'] < primary_TSR]['TSR'].values.max()
+            primary_Rank += ((primary_TSR - below) / (above - below))*1/tsr_list['TSR'].count()
+        if primary_Rank >= 0.90:
+            primary_Score = 2
+        elif primary_Rank >= 0.5:
+            primary_Score = ((primary_Rank - 0.5) / 0.4) + 1
+        elif primary_Rank >= 0.25 and primary_Rank < 0.90:
+            primary_Score = ((primary_Rank - 0.25) / 0.25) * 0.75 + 0.25
         else:
-            CVE_Score = 0
+            primary_Score = 0
 
-        # print the TSR vaule from tsr_list for ticker CVE.TO
-        print("The percentile rank for CVE.TO is", f"{CVE_Rank:.3f}%",
-              "and the CVE Score is", f"{CVE_Score:.2f}", "\n\n")
+        # print the TSR vaule from tsr_list for ticker primary_ticker
+        print("The percentile rank for ", f"{primary_ticker}", " is",
+              f"{primary_Rank:.3f}%", "and the ", f"{primary_ticker}",
+              " Score is", f"{primary_Score:.2f}", "\n\n")
 
         # plot the tsr values for this period
         plot_tsr_ranking(tsr_sorted,
                          tsr_period[1].strftime("%Y-%m-%d"),
                          tsr_period[2].strftime("%Y-%m-%d"),
-                         CVE_Rank)
+                         primary_Rank)
 
         # Extact performance start year
         performance_start_year = tsr_period[0][0:4]
@@ -385,8 +377,8 @@ if __name__ == "__main__":
                                     'start': tsr_period[1].strftime("%Y-%m-%d"),
                                     'end': tsr_period[2].strftime("%Y-%m-%d"),
                                     'weighting': tsr_period[3],
-                                    'rank': CVE_Rank,
-                                    'score': CVE_Score})
+                                    'rank': primary_Rank,
+                                    'score': primary_Score})
 
     # print the performance summary
     print("Performance Summary:\n")
@@ -420,7 +412,7 @@ if __name__ == "__main__":
         ticker_data = price_data_df[price_data_df[str(period[0])+'_TSR'].notnull()]
 
         # create the figure plot
-        fig = plot_tsr_timeline(ticker_data, period[0])
+        fig = plot_tsr_timeline(ticker_data, primary_ticker, period[0])
 
         # save the figure to a file
         fig.savefig('charts/tsr_timeline_' + period[0] + '.png', dpi=600)

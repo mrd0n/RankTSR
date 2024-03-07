@@ -189,18 +189,8 @@ def populate_full_tsr(tickers, price_data_df, dividend_data_df, start_date, end_
 
 if __name__ == "__main__":
     '''
-        The list peer of companies:
-            Cenovus Energy Corporation (CVE.TO)
-            Apache Corporation (APA)
-            Devon Energy Corporation (DVN)
-            BP Plc. (BP)
-            Hess Corporation (HES)
-            Canadian Natural Resources Limited (CNQ.TO)
-            Imperial Oil Limited (IMO.TO)
-            Chevron Corporation (CVX)
-            Ovintiv Inc. (OVV.TO)
-            ConocoPhillips (COP)
-            Suncor Energy Inc. (SU.TO)
+    This script loads data from yfinance and calculates the Total Shareholder Return (TSR)
+    for a list of tickers defined in config.iniover a specified period for each day in the period.
     '''
 
     config = configparser.ConfigParser()
