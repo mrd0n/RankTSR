@@ -189,8 +189,8 @@ def populate_full_tsr(tickers, price_data_df, dividend_data_df, start_date, end_
 
 if __name__ == "__main__":
     '''
-    This script loads data from yfinance and calculates the Total Shareholder Return (TSR)
-    for a list of tickers defined in config.iniover a specified period for each day in the period.
+    This script loads data from yfinance and calculate the Total Shareholder Return (TSR)
+    for a list of tickers defined in config.ini over a specified period for each day in the period.
     '''
 
     config = configparser.ConfigParser()
