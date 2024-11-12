@@ -5,7 +5,7 @@ refresh_data.py - handles the price data loading, refresh and calculations
 
 RankTSR.py - calculates ranking, outputs performance summary and charts 
 
-RankTSR.py - a Panel App to display the TSR performance over a selected period
+RankTSRApp.py - a Panel App to display the TSR performance over a selected period
 
 Make edits to config.ini to change peers, primary_ticker and performance periods
 
