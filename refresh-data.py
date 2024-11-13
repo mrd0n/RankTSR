@@ -40,7 +40,8 @@ def load_data(tickers):
     for ticker in tickers:
         # Load ticker data from file if it exists
         if not os.path.exists('data/' + ticker + '.csv'):
-
+            # added auto_adjust and back_adjust to be False to ensure properly adjusting 
+            # for splits
             data = yf.download(ticker, '2020-01-01', datetime.today(), progress=False,
                                auto_adjust=False, back_adjust=False)
             data['Ticker'] = ticker
