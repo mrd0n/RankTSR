@@ -70,7 +70,8 @@ def load_data(tickers):
                                              end=datetime.today(), progress=False).index[-1]
             # update the ticker data
             if last_date < last_yfinance_date:
-                new_data = yf.download(ticker, start=last_date+timedelta(days=1), progress=False)
+                new_data = yf.download(ticker, start=last_date+timedelta(days=1), progress=False,
+                                       auto_adjust=False, back_adjust=False)
 
                 # if new_data is empty, continue the loop
                 if new_data.empty:
